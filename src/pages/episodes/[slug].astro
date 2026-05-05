@@ -1,0 +1,91 @@
+---
+import {sanityClient} from '../../lib/sanity'
+
+export async function getStaticPaths() {
+  const episodes = await sanityClient.fetch(`
+    *[_type == "episode"] {
+      "slug": slug.current
+    }
+  `)
+  
+  return episodes.map((episode: any) => ({
+    params: {slug: episode.slug},
+  }))
+}
+
+const {slug} = Astro.params
+
+const episode = await sanityClient.fetch(`
+  *[_type == "episode" && slug.current == $slug][0] {
+    title,
+    episodeNumber,
+    publishedAt,
+    description,
+    audioUrl,
+    duration,
+    fileSize,
+    season,
+    explicit
+  }
+`, {slug})
+
+if (!episode) {
+  return Astro.redirect('/404')
+}
+
+const formattedDate = new Date(episode.publishedAt).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+})
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width"/>
+    <title>{episode.title} - Sudan Art Archive Podcast</title>
+  </head>
+  <body>
+    <main>
+      <a href="/">← Back to Episodes</a>
+      
+      <h1>Episode {episode.episodeNumber}: {episode.title}</h1>
+      
+      <p><strong>Published:</strong> {formattedDate}</p>
+      {episode.season && <p><strong>Season:</strong> {episode.season}</p>}
+      {episode.duration && <p><strong>Duration:</strong> {episode.duration}</p>}
+      
+      <audio controls style="width: 100%; margin: 2rem 0;">
+        <source src={episode.audioUrl} type="audio/mpeg"/>
+        Your browser does not support the audio element.
+      </audio>
+      
+      <h2>About This Episode</h2>
+      <p>{episode.description}</p>
+    </main>
+    
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        line-height: 1.6;
+      }
+      
+      a {
+        color: #0066cc;
+        text-decoration: none;
+      }
+      
+      a:hover {
+        text-decoration: underline;
+      }
+      
+      h1 {
+        margin-top: 2rem;
+      }
+    </style>
+  </body>
+</html>
