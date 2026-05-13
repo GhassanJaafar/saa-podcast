@@ -62,6 +62,20 @@ const pageTitle = `${episode.title} — Sudan Art Archive Podcast`;
 
     <!-- Header -->
     <header class="pb-8 mb-8 border-b border-saa-border">
+
+      <!-- Cover image (only shown if the episode has one) -->
+      {episode.coverImage && (
+        <div class="mb-8">
+          <img
+            src={episode.coverImage}
+            alt={`Cover image for ${episode.title}`}
+            class="w-full max-w-sm aspect-square object-cover rounded-sm"
+            loading="eager"
+            itemprop="image"
+          />
+        </div>
+      )}
+
       <div class="flex items-center gap-3 mb-4">
         <span class="font-sans text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted">
           {episode.season ? `Season ${episode.season} · ` : ''}Episode {episode.episodeNumber}
