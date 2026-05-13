@@ -1,0 +1,163 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  canonicalUrl?: string;
+  type?: 'website' | 'article';
+}
+
+const {
+  title,
+  description = 'Sudan Art Archive Podcast — Conversations on Sudanese art, culture, and creativity.',
+  image,
+  canonicalUrl,
+  type = 'website',
+} = Astro.props;
+
+const siteUrl = 'https://podcast.sudanartarchive.com';
+const pageUrl = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
+const ogImage = image || `${siteUrl}/og-cover.jpg`;
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en" class="bg-saa-white text-saa-black antialiased">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={pageUrl} />
+
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Sudan Art Archive Podcast"
+      href="/podcast/feed.xml"
+    />
+
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1400" />
+    <meta property="og:image:height" content="1400" />
+    <meta property="og:site_name" content="Sudan Art Archive Podcast" />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  </head>
+
+  <body class="min-h-svh flex flex-col font-sans bg-saa-white text-saa-black">
+
+    <!-- ── Header ── -->
+    <header class="border-b border-saa-border">
+      <div class="max-w-[940px] mx-auto px-5 md:px-10 py-5 flex items-center justify-between gap-6">
+
+        <div class="flex flex-col gap-0.5 leading-none">
+          <a
+            href="https://sudanartarchive.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-[9px] font-sans font-semibold tracking-[0.2em] uppercase text-saa-muted hover:text-saa-black transition-colors"
+          >
+            Sudan Art Archive
+          </a>
+          <a href="/" class="font-serif text-base font-semibold tracking-wide text-saa-black">
+            Podcast
+          </a>
+        </div>
+
+        <nav aria-label="Main navigation" class="flex items-center gap-7">
+          <a href="/" class="font-sans text-[10px] font-semibold tracking-[0.12em] uppercase text-saa-muted hover:text-saa-black transition-colors">
+            Episodes
+          </a>
+          <a href="/podcast/feed.xml" class="font-sans text-[10px] font-semibold tracking-[0.12em] uppercase text-saa-muted hover:text-saa-black transition-colors" aria-label="RSS Feed">
+            RSS
+          </a>
+          <a
+            href="https://sudanartarchive.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-sans text-[10px] font-semibold tracking-[0.12em] uppercase text-saa-muted hover:text-saa-black transition-colors"
+          >
+            Archive ↗
+          </a>
+        </nav>
+
+      </div>
+    </header>
+
+    <!-- ── Main ── -->
+    <main id="main-content" class="flex-1 py-14 px-5 md:px-10">
+      <div class="max-w-[940px] mx-auto">
+        <slot />
+      </div>
+    </main>
+
+    <!-- ── Footer ── -->
+    <footer class="border-t border-saa-border py-8 px-5 md:px-10">
+      <div class="max-w-[940px] mx-auto flex items-center justify-between gap-5 flex-wrap">
+
+        <p class="font-sans text-[11px] text-saa-muted">
+          © {year} Sudan Art Archive. A project of{' '}
+          <a
+            href="https://musesd.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-saa-black transition-colors underline underline-offset-2"
+          >
+            The Muse multi studios
+          </a>.
+        </p>
+
+        <nav aria-label="Social links" class="flex items-center gap-6 flex-wrap">
+          <!-- Facebook -->
+          <a
+            href="https://www.facebook.com/sudanartarchive"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Sudan Art Archive on Facebook"
+            class="font-sans text-[10px] font-semibold tracking-[0.1em] uppercase text-saa-muted hover:text-saa-black transition-colors"
+          >
+            Facebook
+          </a>
+          <!-- Instagram -->
+          <a
+            href="https://www.instagram.com/sudanartarchive/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Sudan Art Archive on Instagram"
+            class="font-sans text-[10px] font-semibold tracking-[0.1em] uppercase text-saa-muted hover:text-saa-black transition-colors"
+          >
+            Instagram
+          </a>
+          <!-- LinkedIn -->
+          <a
+            href="https://www.linkedin.com/company/sudan-art-archive"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Sudan Art Archive on LinkedIn"
+            class="font-sans text-[10px] font-semibold tracking-[0.1em] uppercase text-saa-muted hover:text-saa-black transition-colors"
+          >
+            LinkedIn
+          </a>
+        </nav>
+
+      </div>
+    </footer>
+
+  </body>
+</html>

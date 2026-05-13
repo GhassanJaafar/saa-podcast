@@ -1,140 +1,86 @@
 ---
-import {sanityClient} from '../lib/sanity'
+import Layout from '../layouts/Layout.astro';
+import { sanityClient } from '../lib/sanity';
 
 const episodes = await sanityClient.fetch(`
-  *[_type == "episode"] | order(episodeNumber desc) {
+  *[_type == "episode" && defined(slug.current) && defined(publishedAt) && defined(audioUrl)]
+  | order(episodeNumber desc) {
     title,
     episodeNumber,
+    season,
     publishedAt,
     description,
     duration,
     "slug": slug.current
   }
-`)
+`);
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width"/>
-    <title>Sudan Art Archive Podcast</title>
-  </head>
-  <body>
-    <header>
-      <h1>Sudan Art Archive Podcast</h1>
-      <p>Exploring Sudanese art, culture, and creativity</p>
-    </header>
-    
-    <main>
-      <h2>Episodes</h2>
-      
-      {episodes.length === 0 ? (
-        <p>No episodes yet. Check back soon!</p>
-      ) : (
-        <ul class="episode-list">
-          {episodes.map((ep: any) => (
-            <li class="episode-card">
-              <div class="episode-number">Episode {ep.episodeNumber}</div>
-              <h3>
-                <a href={`/episodes/${ep.slug}`}>{ep.title}</a>
-              </h3>
-              <p class="episode-meta">
+<Layout
+  title="Sudan Art Archive Podcast — Episodes"
+  description="Conversations on Sudanese art, culture, and creativity. Hosted by Sudan Art Archive."
+>
+
+  <!-- ── Page header ── -->
+  <div class="pb-10 border-b border-saa-border">
+    <p class="font-sans text-[9px] font-semibold tracking-[0.2em] uppercase text-saa-muted mb-3">
+      Sudan Art Archive
+    </p>
+    <h1 class="font-serif text-[clamp(2.75rem,7vw,5rem)] font-light tracking-tight leading-none mb-4 text-saa-black">
+      Podcast
+    </h1>
+    <p class="font-sans text-sm text-saa-muted leading-relaxed max-w-xl">
+      Conversations on Sudanese art, culture, and creativity.
+    </p>
+  </div>
+
+  <!-- ── Episode list ── -->
+  {episodes.length === 0 ? (
+    <p class="py-20 font-sans text-sm text-saa-muted">No episodes yet. Check back soon.</p>
+  ) : (
+    <ol aria-label="Episode list" class="divide-y divide-saa-border">
+      {episodes.map((ep: any) => (
+        <li>
+          <a
+            href={`/episodes/${ep.slug}`}
+            aria-label={`Listen to episode ${ep.episodeNumber}: ${ep.title}`}
+            class="block py-8 no-underline text-saa-black hover:opacity-60 transition-opacity focus-visible:outline-2 focus-visible:outline-saa-black focus-visible:outline-offset-4 rounded-sm"
+          >
+            <!-- row: episode label + date -->
+            <div class="flex items-baseline justify-between gap-4 mb-2.5 flex-wrap">
+              <span class="font-sans text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted">
+                {ep.season ? `S${ep.season} · ` : ''}Ep. {ep.episodeNumber}
+              </span>
+              <span class="font-sans text-[11px] text-saa-muted">
                 {new Date(ep.publishedAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
-                  day: 'numeric'
+                  day: 'numeric',
                 })}
-                {ep.duration && ` • ${ep.duration}`}
+                {ep.duration && <span> · {ep.duration}</span>}
+              </span>
+            </div>
+
+            <!-- title: IBM Plex Serif -->
+            <h2 class="font-serif text-[clamp(1.3rem,3.5vw,1.9rem)] font-normal leading-snug mb-3 text-saa-black">
+              {ep.title}
+            </h2>
+
+            <!-- description (2-line clamp) -->
+            {ep.description && (
+              <p class="font-sans text-[13px] text-saa-muted leading-relaxed mb-4 max-w-prose line-clamp-2">
+                {ep.description}
               </p>
-              <p class="episode-description">{ep.description}</p>
-              <a href={`/episodes/${ep.slug}`} class="listen-link">Listen →</a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
-    
-    <style>
-      body {
-        font-family: system-ui, sans-serif;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 2rem;
-        line-height: 1.6;
-        background: #f9f9f9;
-      }
-      
-      header {
-        text-align: center;
-        margin-bottom: 3rem;
-        padding-bottom: 2rem;
-        border-bottom: 2px solid #e0e0e0;
-      }
-      
-      header h1 {
-        margin-bottom: 0.5rem;
-        color: #222;
-      }
-      
-      header p {
-        color: #666;
-        font-size: 1.1rem;
-      }
-      
-      .episode-list {
-        list-style: none;
-        padding: 0;
-      }
-      
-      .episode-card {
-        background: white;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-      
-      .episode-number {
-        color: #666;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
-      }
-      
-      .episode-card h3 {
-        margin: 0 0 0.5rem 0;
-      }
-      
-      .episode-card h3 a {
-        color: #222;
-        text-decoration: none;
-      }
-      
-      .episode-card h3 a:hover {
-        color: #0066cc;
-      }
-      
-      .episode-meta {
-        color: #666;
-        font-size: 0.9rem;
-        margin: 0 0 1rem 0;
-      }
-      
-      .episode-description {
-        color: #444;
-        margin-bottom: 1rem;
-      }
-      
-      .listen-link {
-        color: #0066cc;
-        text-decoration: none;
-        font-weight: 500;
-      }
-      
-      .listen-link:hover {
-        text-decoration: underline;
-      }
-    </style>
-  </body>
-</html>
+            )}
+
+            <!-- CTA -->
+            <span class="font-sans inline-block text-[10px] font-semibold tracking-[0.1em] uppercase border-b border-saa-black pb-[1px]">
+              Listen →
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  )}
+
+</Layout>

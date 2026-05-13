@@ -1,91 +1,167 @@
 ---
-import {sanityClient} from '../../lib/sanity'
+import Layout from '../../layouts/Layout.astro';
+import { sanityClient } from '../../lib/sanity';
 
-export async function getStaticPaths() {
-  const episodes = await sanityClient.fetch(`
-    *[_type == "episode"] {
-      "slug": slug.current
-    }
-  `)
-  
-  return episodes.map((episode: any) => ({
-    params: {slug: episode.slug},
-  }))
-}
+const { slug } = Astro.params;
 
-const {slug} = Astro.params
+if (!slug) return Astro.redirect('/404');
 
-const episode = await sanityClient.fetch(`
-  *[_type == "episode" && slug.current == $slug][0] {
+// Only allow safe slug characters — blocks path traversal and injection attempts
+if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return Astro.redirect('/404');
+
+const episode = await sanityClient.fetch(
+  `*[_type == "episode" && slug.current == $slug && defined(publishedAt) && defined(audioUrl)][0] {
     title,
     episodeNumber,
+    season,
     publishedAt,
     description,
     audioUrl,
     duration,
     fileSize,
-    season,
-    explicit
-  }
-`, {slug})
+    explicit,
+    "slug": slug.current,
+    "coverImage": coverImage.asset->url
+  }`,
+  { slug }
+);
 
-if (!episode) {
-  return Astro.redirect('/404')
-}
+if (!episode) return Astro.redirect('/404');
 
 const formattedDate = new Date(episode.publishedAt).toLocaleDateString('en-US', {
   year: 'numeric',
   month: 'long',
-  day: 'numeric'
-})
+  day: 'numeric',
+});
+
+const siteUrl = 'https://podcast.sudanartarchive.com';
+const pageUrl = `${siteUrl}/episodes/${slug}`;
+const pageTitle = `${episode.title} — Sudan Art Archive Podcast`;
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width"/>
-    <title>{episode.title} - Sudan Art Archive Podcast</title>
-  </head>
-  <body>
-    <main>
-      <a href="/">← Back to Episodes</a>
-      
-      <h1>Episode {episode.episodeNumber}: {episode.title}</h1>
-      
-      <p><strong>Published:</strong> {formattedDate}</p>
-      {episode.season && <p><strong>Season:</strong> {episode.season}</p>}
-      {episode.duration && <p><strong>Duration:</strong> {episode.duration}</p>}
-      
-      <audio controls style="width: 100%; margin: 2rem 0;">
-        <source src={episode.audioUrl} type="audio/mpeg"/>
+<Layout
+  title={pageTitle}
+  description={episode.description || `Episode ${episode.episodeNumber} of the Sudan Art Archive Podcast.`}
+  image={episode.coverImage}
+  canonicalUrl={pageUrl}
+  type="article"
+>
+
+  <!-- ── Breadcrumb ── -->
+  <nav aria-label="Back to episodes" class="mb-12">
+    <a
+      href="/"
+      class="font-sans text-[10px] font-semibold tracking-[0.1em] uppercase text-saa-muted border-b border-transparent hover:text-saa-black hover:border-saa-black transition-all pb-[1px]"
+    >
+      ← All Episodes
+    </a>
+  </nav>
+
+  <!-- ── Episode article ── -->
+  <article itemscope itemtype="https://schema.org/PodcastEpisode">
+
+    <!-- Header -->
+    <header class="pb-8 mb-8 border-b border-saa-border">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="font-sans text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted">
+          {episode.season ? `Season ${episode.season} · ` : ''}Episode {episode.episodeNumber}
+        </span>
+        {episode.explicit && (
+          <span
+            class="font-sans inline-block bg-saa-black text-saa-white text-[8px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5"
+            aria-label="Explicit content"
+          >
+            Explicit
+          </span>
+        )}
+      </div>
+
+      <!-- IBM Plex Serif title -->
+      <h1
+        class="font-serif text-[clamp(1.9rem,5vw,3.25rem)] font-light leading-[1.2] tracking-tight mb-4 text-saa-black"
+        itemprop="name"
+      >
+        {episode.title}
+      </h1>
+
+      <div class="flex items-center gap-2 font-sans text-sm text-saa-muted flex-wrap">
+        <time datetime={episode.publishedAt} itemprop="datePublished">{formattedDate}</time>
+        {episode.duration && <span>· {episode.duration}</span>}
+      </div>
+    </header>
+
+    <!-- Audio player -->
+    <div
+      class="bg-saa-cream rounded-sm p-6 mb-10"
+      role="region"
+      aria-label="Episode audio player"
+    >
+      <audio
+        controls
+        preload="metadata"
+        class="w-full h-11"
+        itemprop="contentUrl"
+        aria-label={`Listen to ${episode.title}`}
+      >
+        <source src={episode.audioUrl} type="audio/mpeg" />
         Your browser does not support the audio element.
+        <a href={episode.audioUrl}>Download audio</a>
       </audio>
-      
-      <h2>About This Episode</h2>
-      <p>{episode.description}</p>
-    </main>
-    
-    <style>
-      body {
-        font-family: system-ui, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 2rem;
-        line-height: 1.6;
-      }
-      
-      a {
-        color: #0066cc;
-        text-decoration: none;
-      }
-      
-      a:hover {
-        text-decoration: underline;
-      }
-      
-      h1 {
-        margin-top: 2rem;
-      }
-    </style>
-  </body>
-</html>
+    </div>
+
+    <!-- Description -->
+    {episode.description && (
+      <section class="mb-12">
+        <span class="font-sans block text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted mb-3">
+          About This Episode
+        </span>
+        <p class="font-serif text-[1.05rem] leading-[1.8] max-w-[68ch] text-saa-black" itemprop="description">
+          {episode.description}
+        </p>
+      </section>
+    )}
+
+    <!-- Share -->
+    <footer class="pt-8 border-t border-saa-border">
+      <div class="flex items-center gap-6 flex-wrap">
+        <span class="font-sans text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted">
+          Share
+        </span>
+        <div class="flex gap-5 flex-wrap">
+          <a
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
+          >
+            Facebook
+          </a>
+          <a
+            href={`https://www.instagram.com/sudanartarchive/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
+          >
+            Instagram
+          </a>
+          <a
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
+          >
+            LinkedIn
+          </a>
+          <a
+            href="/podcast/feed.xml"
+            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
+          >
+            RSS Feed
+          </a>
+        </div>
+      </div>
+    </footer>
+
+  </article>
+
+</Layout>

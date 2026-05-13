@@ -1,0 +1,31 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+Astro.response.status = 404;
+---
+
+<Layout
+  title="Page Not Found — Sudan Art Archive Podcast"
+  description="The page you're looking for doesn't exist."
+>
+  <div class="py-24 flex flex-col items-start gap-5">
+    <span class="font-sans text-[9px] font-semibold tracking-[0.2em] uppercase text-saa-muted">
+      404
+    </span>
+
+    <h1 class="font-serif text-[clamp(2.5rem,7vw,4.5rem)] font-light tracking-tight leading-none text-saa-black">
+      Page Not Found
+    </h1>
+
+    <p class="font-sans text-sm text-saa-muted leading-relaxed max-w-[45ch]">
+      The page you're looking for doesn't exist or may have been moved.
+    </p>
+
+    <a
+      href="/"
+      class="font-sans mt-2 inline-block text-[10px] font-semibold tracking-[0.1em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
+    >
+      ← Back to Episodes
+    </a>
+  </div>
+</Layout>
