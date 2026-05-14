@@ -1,86 +1,157 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import { sanityClient } from '../lib/sanity';
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { sanityClient } from "../lib/sanity";
 
 const episodes = await sanityClient.fetch(`
-  *[_type == "episode" && defined(slug.current) && defined(publishedAt) && defined(audioUrl)]
-  | order(episodeNumber desc) {
+  *[_type == "episode" && defined(slug.current)] | order(publishedAt desc) {
     title,
     episodeNumber,
-    season,
+    "slug": slug.current,
     publishedAt,
     description,
     duration,
-    "slug": slug.current
+    season
   }
 `);
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatDuration(val: unknown) {
+  if (!val) return "";
+  // Sanity stores duration as "HH:MM:SS" string
+  const parts = String(val).split(":").map(Number);
+  if (parts.length < 2 || parts.some(isNaN)) return "";
+  const [h, m, s] = parts.length === 3 ? parts : [0, parts[0], parts[1]];
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${String(s ?? 0).padStart(2, "0")}s`;
+}
+
+// Group by season
+const bySeason: Record<number, typeof episodes> = {};
+for (const ep of episodes) {
+  const s = ep.season ?? 1;
+  (bySeason[s] ||= []).push(ep);
+}
+const seasons = Object.keys(bySeason)
+  .map(Number)
+  .sort((a, b) => b - a); // newest season first
 ---
 
-<Layout
-  title="Sudan Art Archive Podcast — Episodes"
-  description="Conversations on Sudanese art, culture, and creativity. Hosted by Sudan Art Archive."
+<BaseLayout
+  title="SAA Podcast"
+  description="Sudan Art Archive Podcast — Preserving 50 Years of Sudanese Artistry!"
 >
+  <style>
+    .page-intro { margin-bottom: 2rem; }
+    .page-intro h1 { font-size: 1.1rem; font-weight: 600; line-height: 1.3; letter-spacing: 0.01em; }
 
-  <!-- ── Page header ── -->
-  <div class="pb-10 border-b border-saa-border">
-    <p class="font-sans text-[9px] font-semibold tracking-[0.2em] uppercase text-saa-muted mb-3">
-      Sudan Art Archive
-    </p>
-    <h1 class="font-serif text-[clamp(2.75rem,7vw,5rem)] font-light tracking-tight leading-none mb-4 text-saa-black">
-      Podcast
-    </h1>
-    <p class="font-sans text-sm text-saa-muted leading-relaxed max-w-xl">
-      Conversations on Sudanese art, culture, and creativity.
-    </p>
+    .season-section { margin-bottom: 3rem; }
+    .season-heading {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      opacity: 0.5;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(36,38,38,0.12);
+    }
+
+    .episode-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .episode-card {
+      padding: 1.25rem 0;
+      border-bottom: 1px solid rgba(36,38,38,0.1);
+      display: grid;
+      grid-template-columns: 2.5rem 1fr;
+      gap: 0 1rem;
+    }
+    .episode-card:first-child { border-top: 1px solid rgba(36,38,38,0.1); }
+
+    .episode-num {
+      font-size: 0.78rem;
+      font-weight: 300;
+      opacity: 0.45;
+      padding-top: 0.2rem;
+      text-align: right;
+    }
+
+    .episode-body {}
+    .episode-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.35;
+      margin-bottom: 0.3rem;
+    }
+    .episode-title a { text-decoration: none; }
+    .episode-title a:hover { color: var(--color-hover); }
+
+    .episode-meta {
+      font-size: 0.78rem;
+      font-weight: 300;
+      opacity: 0.6;
+      margin-bottom: 0.5rem;
+    }
+    .episode-meta span + span::before { content: " · "; }
+
+    .episode-desc {
+      font-size: 0.88rem;
+      font-weight: 300;
+      line-height: 1.6;
+      opacity: 0.8;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .empty-state { font-style: italic; opacity: 0.55; font-weight: 300; padding: 2rem 0; }
+  </style>
+
+  <div class="page-intro">
+    <h1>Episodes</h1>
   </div>
 
-  <!-- ── Episode list ── -->
   {episodes.length === 0 ? (
-    <p class="py-20 font-sans text-sm text-saa-muted">No episodes yet. Check back soon.</p>
+    <p class="empty-state">Episodes coming soon.</p>
   ) : (
-    <ol aria-label="Episode list" class="divide-y divide-saa-border">
-      {episodes.map((ep: any) => (
-        <li>
-          <a
-            href={`/episodes/${ep.slug}`}
-            aria-label={`Listen to episode ${ep.episodeNumber}: ${ep.title}`}
-            class="block py-8 no-underline text-saa-black hover:opacity-60 transition-opacity focus-visible:outline-2 focus-visible:outline-saa-black focus-visible:outline-offset-4 rounded-sm"
-          >
-            <!-- row: episode label + date -->
-            <div class="flex items-baseline justify-between gap-4 mb-2.5 flex-wrap">
-              <span class="font-sans text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted">
-                {ep.season ? `S${ep.season} · ` : ''}Ep. {ep.episodeNumber}
-              </span>
-              <span class="font-sans text-[11px] text-saa-muted">
-                {new Date(ep.publishedAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-                {ep.duration && <span> · {ep.duration}</span>}
-              </span>
-            </div>
-
-            <!-- title: IBM Plex Serif -->
-            <h2 class="font-serif text-[clamp(1.3rem,3.5vw,1.9rem)] font-normal leading-snug mb-3 text-saa-black">
-              {ep.title}
-            </h2>
-
-            <!-- description (2-line clamp) -->
-            {ep.description && (
-              <p class="font-sans text-[13px] text-saa-muted leading-relaxed mb-4 max-w-prose line-clamp-2">
-                {ep.description}
-              </p>
-            )}
-
-            <!-- CTA -->
-            <span class="font-sans inline-block text-[10px] font-semibold tracking-[0.1em] uppercase border-b border-saa-black pb-[1px]">
-              Listen →
-            </span>
-          </a>
-        </li>
-      ))}
-    </ol>
+    seasons.map((season) => (
+      <section class="season-section">
+        {seasons.length > 1 && (
+          <p class="season-heading">Season {season}</p>
+        )}
+        <ul class="episode-list">
+          {bySeason[season].map((ep) => (
+            <li class="episode-card">
+              <span class="episode-num">{ep.episodeNumber ?? "—"}</span>
+              <div class="episode-body">
+                <h2 class="episode-title">
+                  <a href={`/episodes/${ep.slug}`}>{ep.title}</a>
+                </h2>
+                <p class="episode-meta">
+                  {ep.publishedAt && <span>{formatDate(ep.publishedAt)}</span>}
+                  {ep.duration   && <span>{formatDuration(ep.duration)}</span>}
+                </p>
+                {ep.description && (
+                  <p class="episode-desc">{ep.description}</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
   )}
 
-</Layout>
+</BaseLayout>

@@ -1,0 +1,284 @@
+---
+/**
+ * BaseLayout.astro
+ * Central layout for all SAA Podcast pages.
+ *
+ * Props:
+ *   title        - Page <title> (will be appended with " | SAA Podcast")
+ *   description  - Meta description / OG description
+ *   ogImage      - Absolute URL for OG + Twitter card image (optional)
+ *                  Defaults to /cover-season-1.jpg
+ *   canonicalUrl - Full canonical URL for this page (optional)
+ *   type         - OG type, defaults to "website"
+ */
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+  type?: string;
+}
+
+const {
+  title,
+  description = "A podcast by Sudan Art Archive — Preserving 50 Years of Sudanese Artistry!",
+  ogImage,
+  canonicalUrl,
+  type = "website",
+} = Astro.props;
+
+const siteName  = "SAA Podcast";
+const siteUrl   = import.meta.env.PUBLIC_SITE_URL || "https://podcast.sudanartarchive.com";
+const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
+
+// Cover image: prefer prop, then env var, then default path
+const coverImage =
+  ogImage ||
+  import.meta.env.PUBLIC_COVER_IMAGE_URL ||
+  `${siteUrl}/cover-season-1.jpg`;
+
+const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ── Favicon ───────────────────────────────────────────────── -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- ── Primary SEO ──────────────────────────────────────────── -->
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <!-- ── Open Graph (Facebook, WhatsApp, iMessage link previews) ─ -->
+    <meta property="og:type"        content={type} />
+    <meta property="og:site_name"   content={siteName} />
+    <meta property="og:title"       content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url"         content={canonical} />
+    <meta property="og:image"       content={coverImage} />
+    <meta property="og:image:width"  content="1400" />
+    <meta property="og:image:height" content="1400" />
+    <meta property="og:image:alt"   content="Sudan Art Archive Podcast cover art" />
+    <meta property="og:locale"      content="en_US" />
+
+    <!-- ── Twitter / X Card ─────────────────────────────────────── -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image"       content={coverImage} />
+    <meta name="twitter:image:alt"   content="Sudan Art Archive Podcast cover art" />
+
+    <!-- ── RSS autodiscovery ─────────────────────────────────────── -->
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={siteName}
+      href={`${siteUrl}/podcast/feed.xml`}
+    />
+
+    <!-- ── IBM Plex Serif (Google Fonts) ─────────────────────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- ── Global styles ─────────────────────────────────────────── -->
+    <style is:global>
+      :root {
+        --color-bg:    #fefbe1;
+        --color-text:  #242626;
+        --color-hover: #e85b53;
+        --font-serif:  'IBM Plex Serif', Georgia, 'Times New Roman', serif;
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html { font-size: 18px; scroll-behavior: smooth; }
+
+      body {
+        font-family: var(--font-serif);
+        background-color: var(--color-bg);
+        color: var(--color-text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: var(--color-text);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        transition: color 0.15s ease;
+      }
+      a:hover { color: var(--color-hover); }
+
+      img { max-width: 100%; height: auto; display: block; }
+
+      /* main has no horizontal padding — alignment is controlled by max-width + 1.5rem padding
+         shared by header__inner, footer__inner, and main itself */
+      main { flex: 1; width: 100%; max-width: 940px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+      /* ── Site header ──────────────────────────────────────────── */
+      .site-header {
+        border-bottom: 1px solid rgba(36, 38, 38, 0.15);
+        padding: 1rem 0;
+      }
+      .site-header__inner {
+        max-width: 940px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+      }
+
+      /* Brand block: logo + wordmark */
+      .site-header__brand {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        text-decoration: none;
+      }
+      .site-header__logo { height: 48px; width: auto; }
+
+      .site-header__wordmark {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        line-height: 1;
+      }
+      .site-header__archive-link {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        text-decoration: none;
+        color: var(--color-text);
+        opacity: 0.45;
+        transition: opacity 0.15s, color 0.15s;
+      }
+      .site-header__archive-link:hover { opacity: 1; color: var(--color-hover); }
+      .site-header__podcast-label {
+        font-size: 1.35rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: var(--color-text);
+        text-decoration: none;
+      }
+
+      /* Nav */
+      .site-nav { display: flex; align-items: center; gap: 1.75rem; }
+      .site-nav a {
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        text-decoration: none;
+        color: var(--color-text);
+        opacity: 0.45;
+        transition: opacity 0.15s, color 0.15s;
+      }
+      .site-nav a:hover { opacity: 1; color: var(--color-hover); }
+
+      /* ── Site footer ──────────────────────────────────────────── */
+      .site-footer {
+        border-top: 1px solid rgba(36, 38, 38, 0.15);
+        padding: 2rem 0;
+      }
+      .site-footer__inner {
+        max-width: 940px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .site-footer__credit {
+        font-size: 0.7rem;
+        font-weight: 300;
+        opacity: 0.5;
+      }
+      .site-footer__credit a {
+        opacity: 1;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .site-footer__social { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+      .site-footer__social a {
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        text-decoration: none;
+        color: var(--color-text);
+        opacity: 0.4;
+        transition: opacity 0.15s, color 0.15s;
+      }
+      .site-footer__social a:hover { opacity: 1; color: var(--color-hover); }
+    </style>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+
+        <!-- Logo + wordmark -->
+        <div class="site-header__brand">
+          <a href="/" aria-label="Go to episode list">
+            <img src="/logo.svg" alt="Sudan Art Archive" class="site-header__logo" width="210" height="166" />
+          </a>
+          <div class="site-header__wordmark">
+            <a
+              href="https://sudanartarchive.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="site-header__archive-link"
+            >Sudan Art Archive</a>
+            <a href="/" class="site-header__podcast-label">Podcast</a>
+          </div>
+        </div>
+
+        <!-- Nav -->
+        <nav aria-label="Main navigation" class="site-nav">
+          <a href="/">Episodes</a>
+          <a href="/podcast/feed.xml" aria-label="RSS feed">RSS</a>
+          <a href="https://sudanartarchive.com" target="_blank" rel="noopener noreferrer">Archive ↗</a>
+        </nav>
+
+      </div>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <p class="site-footer__credit">
+          &copy; {new Date().getFullYear()} Sudan Art Archive. A project of{" "}
+          <a href="https://musesd.com" target="_blank" rel="noopener noreferrer">The Muse multi studios</a>.
+        </p>
+        <nav aria-label="Social links" class="site-footer__social">
+          <a href="https://www.facebook.com/sudanartarchive" target="_blank" rel="noopener noreferrer" aria-label="Facebook">Facebook</a>
+          <a href="https://www.instagram.com/sudanartarchive/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">Instagram</a>
+          <a href="https://www.linkedin.com/company/sudan-art-archive" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">LinkedIn</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

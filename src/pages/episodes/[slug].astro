@@ -1,181 +1,191 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import { sanityClient } from '../../lib/sanity';
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { sanityClient } from "../../lib/sanity";
+
+export async function getStaticPaths() {
+  const episodes = await sanityClient.fetch(`
+    *[_type == "episode" && defined(slug.current)] {
+      "slug": slug.current
+    }
+  `);
+  return episodes.map((ep: { slug: string }) => ({
+    params: { slug: ep.slug },
+  }));
+}
 
 const { slug } = Astro.params;
 
-if (!slug) return Astro.redirect('/404');
-
-// Only allow safe slug characters — blocks path traversal and injection attempts
-if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return Astro.redirect('/404');
-
 const episode = await sanityClient.fetch(
-  `*[_type == "episode" && slug.current == $slug && defined(publishedAt) && defined(audioUrl)][0] {
+  `*[_type == "episode" && slug.current == $slug][0] {
     title,
     episodeNumber,
-    season,
+    "slug": slug.current,
     publishedAt,
     description,
     audioUrl,
     duration,
     fileSize,
+    season,
     explicit,
-    "slug": slug.current,
-    "coverImage": coverImage.asset->url
+    coverImage { asset->{ url } }
   }`,
   { slug }
 );
 
-if (!episode) return Astro.redirect('/404');
+if (!episode) {
+  return Astro.redirect("/404");
+}
 
-const formattedDate = new Date(episode.publishedAt).toLocaleDateString('en-US', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-});
+const siteUrl = import.meta.env.PUBLIC_SITE_URL || "https://podcast.sudanartarchive.com";
 
-const siteUrl = 'https://podcast.sudanartarchive.com';
-const pageUrl = `${siteUrl}/episodes/${slug}`;
-const pageTitle = `${episode.title} — Sudan Art Archive Podcast`;
+function formatDate(dateStr: string) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatDuration(val: unknown) {
+  if (!val) return null;
+  // Sanity stores duration as "HH:MM:SS" string
+  const parts = String(val).split(":").map(Number);
+  if (parts.length < 2 || parts.some(isNaN)) return null;
+  const [h, m, s] = parts.length === 3 ? parts : [0, parts[0], parts[1]];
+  if (h > 0) return `${h} hr ${m} min`;
+  return `${m} min ${String(s ?? 0).padStart(2, "0")} sec`;
+}
+
+const episodeCover = episode.coverImage?.asset?.url;
+const ogImage =
+  episodeCover ||
+  import.meta.env.PUBLIC_COVER_IMAGE_URL ||
+  `${siteUrl}/cover-season-1.jpg`;
+const canonicalUrl = `${siteUrl}/episodes/${slug}`;
 ---
 
-<Layout
-  title={pageTitle}
-  description={episode.description || `Episode ${episode.episodeNumber} of the Sudan Art Archive Podcast.`}
-  image={episode.coverImage}
-  canonicalUrl={pageUrl}
+<BaseLayout
+  title={episode.title}
+  description={episode.description || `Episode ${episode.episodeNumber} of the Sudan Art Archive Podcast`}
+  ogImage={ogImage}
+  canonicalUrl={canonicalUrl}
   type="article"
 >
+  <style>
+    .back-link {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 300;
+      text-decoration: none;
+      opacity: 0.6;
+      margin-bottom: 2rem;
+      transition: opacity 0.15s;
+    }
+    .back-link:hover { opacity: 1; color: var(--color-hover); }
+    .back-link::before { content: "← "; }
 
-  <!-- ── Breadcrumb ── -->
-  <nav aria-label="Back to episodes" class="mb-12">
-    <a
-      href="/"
-      class="font-sans text-[10px] font-semibold tracking-[0.1em] uppercase text-saa-muted border-b border-transparent hover:text-saa-black hover:border-saa-black transition-all pb-[1px]"
-    >
-      ← All Episodes
-    </a>
-  </nav>
+    .episode-header { margin-bottom: 2rem; }
 
-  <!-- ── Episode article ── -->
-  <article itemscope itemtype="https://schema.org/PodcastEpisode">
+    .episode-label {
+      font-size: 0.75rem;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      opacity: 0.5;
+      margin-bottom: 0.6rem;
+    }
 
-    <!-- Header -->
-    <header class="pb-8 mb-8 border-b border-saa-border">
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.25;
+      margin-bottom: 0.75rem;
+    }
 
-      <!-- Cover image (only shown if the episode has one) -->
-      {episode.coverImage && (
-        <div class="mb-8">
-          <img
-            src={episode.coverImage}
-            alt={`Cover image for ${episode.title}`}
-            class="w-full max-w-sm aspect-square object-cover rounded-sm"
-            loading="eager"
-            itemprop="image"
-          />
-        </div>
+    .episode-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1.25rem;
+      font-size: 0.82rem;
+      font-weight: 300;
+      opacity: 0.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .episode-cover {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 6px;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 4px 20px rgba(36,38,38,0.12);
+    }
+
+    .audio-player {
+      width: 100%;
+      margin-bottom: 2rem;
+      accent-color: var(--color-hover);
+    }
+
+    .episode-description {
+      font-size: 1rem;
+      font-weight: 300;
+      line-height: 1.75;
+      opacity: 0.85;
+    }
+
+  </style>
+
+  <a href="/" class="back-link">All episodes</a>
+
+  <article>
+    <header class="episode-header">
+      <p class="episode-label">
+        {episode.season ? `Season ${episode.season} · ` : ""}
+        {episode.episodeNumber ? `Episode ${episode.episodeNumber}` : "Episode"}
+      </p>
+
+      <h1>{episode.title}</h1>
+
+      <div class="episode-meta">
+        {episode.publishedAt && <span>{formatDate(episode.publishedAt)}</span>}
+        {episode.duration    && <span>{formatDuration(episode.duration)}</span>}
+        {episode.explicit    && <span>Explicit</span>}
+      </div>
+
+      {episodeCover && (
+        <img
+          src={episodeCover}
+          alt={`Cover art for ${episode.title}`}
+          class="episode-cover"
+          width="320"
+          height="320"
+        />
       )}
 
-      <div class="flex items-center gap-3 mb-4">
-        <span class="font-sans text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted">
-          {episode.season ? `Season ${episode.season} · ` : ''}Episode {episode.episodeNumber}
-        </span>
-        {episode.explicit && (
-          <span
-            class="font-sans inline-block bg-saa-black text-saa-white text-[8px] font-semibold tracking-[0.08em] uppercase px-1.5 py-0.5"
-            aria-label="Explicit content"
-          >
-            Explicit
-          </span>
-        )}
-      </div>
-
-      <!-- IBM Plex Serif title -->
-      <h1
-        class="font-serif text-[clamp(1.9rem,5vw,3.25rem)] font-light leading-[1.2] tracking-tight mb-4 text-saa-black"
-        itemprop="name"
-      >
-        {episode.title}
-      </h1>
-
-      <div class="flex items-center gap-2 font-sans text-sm text-saa-muted flex-wrap">
-        <time datetime={episode.publishedAt} itemprop="datePublished">{formattedDate}</time>
-        {episode.duration && <span>· {episode.duration}</span>}
-      </div>
+      {episode.audioUrl ? (
+        <audio
+          controls
+          class="audio-player"
+          preload="metadata"
+        >
+          <source src={episode.audioUrl} type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
+      ) : (
+        <p style="font-style:italic; opacity:0.5; font-size:0.9rem; margin-bottom:1.5rem;">
+          Audio coming soon.
+        </p>
+      )}
     </header>
 
-    <!-- Audio player -->
-    <div
-      class="bg-saa-cream rounded-sm p-6 mb-10"
-      role="region"
-      aria-label="Episode audio player"
-    >
-      <audio
-        controls
-        preload="metadata"
-        class="w-full h-11"
-        itemprop="contentUrl"
-        aria-label={`Listen to ${episode.title}`}
-      >
-        <source src={episode.audioUrl} type="audio/mpeg" />
-        Your browser does not support the audio element.
-        <a href={episode.audioUrl}>Download audio</a>
-      </audio>
-    </div>
-
-    <!-- Description -->
     {episode.description && (
-      <section class="mb-12">
-        <span class="font-sans block text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted mb-3">
-          About This Episode
-        </span>
-        <p class="font-serif text-[1.05rem] leading-[1.8] max-w-[68ch] text-saa-black" itemprop="description">
-          {episode.description}
-        </p>
-      </section>
+      <div class="episode-description">
+        {episode.description.split("\n").map((line: string) =>
+          line ? <p>{line}</p> : <br />
+        )}
+      </div>
     )}
 
-    <!-- Share -->
-    <footer class="pt-8 border-t border-saa-border">
-      <div class="flex items-center gap-6 flex-wrap">
-        <span class="font-sans text-[9px] font-semibold tracking-[0.18em] uppercase text-saa-muted">
-          Share
-        </span>
-        <div class="flex gap-5 flex-wrap">
-          <a
-            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
-          >
-            Facebook
-          </a>
-          <a
-            href={`https://www.instagram.com/sudanartarchive/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
-          >
-            Instagram
-          </a>
-          <a
-            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
-          >
-            LinkedIn
-          </a>
-          <a
-            href="/podcast/feed.xml"
-            class="font-sans text-[10px] font-semibold tracking-[0.08em] uppercase text-saa-muted border-b border-saa-border pb-[1px] hover:text-saa-black hover:border-saa-black transition-all"
-          >
-            RSS Feed
-          </a>
-        </div>
-      </div>
-    </footer>
-
   </article>
-
-</Layout>
+</BaseLayout>
