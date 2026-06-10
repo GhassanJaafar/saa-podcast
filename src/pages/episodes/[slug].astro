@@ -76,29 +76,36 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
   <style>
     .back-link {
       display: inline-block;
-      font-size: 0.85rem;
+      font-size: 0.875rem;
       font-weight: 300;
       text-decoration: none;
-      opacity: 0.6;
+      color: var(--saa-muted);
       margin-bottom: 2rem;
-      transition: opacity 0.15s;
+      transition: color var(--saa-transition);
     }
-    .back-link:hover { opacity: 1; color: var(--color-hover); }
+    .back-link:hover { color: var(--saa-accent); }
     .back-link::before { content: "← "; }
 
-    .episode-header { margin-bottom: 2rem; }
+    .episode-header {
+      background: var(--saa-cream);
+      border: 1px solid var(--saa-sand);
+      border-radius: var(--saa-radius-card);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
 
     .episode-label {
       font-size: 0.75rem;
-      font-weight: 300;
+      font-weight: 600;
       letter-spacing: 0.08em;
-      opacity: 0.5;
+      text-transform: uppercase;
+      color: var(--saa-muted);
       margin-bottom: 0.6rem;
     }
 
     h1 {
-      font-size: 1.75rem;
-      font-weight: 600;
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 300;
       line-height: 1.25;
       margin-bottom: 0.75rem;
     }
@@ -109,30 +116,106 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       gap: 0.25rem 1.25rem;
       font-size: 0.82rem;
       font-weight: 300;
-      opacity: 0.6;
+      color: var(--saa-muted);
       margin-bottom: 1.5rem;
     }
 
     .episode-cover {
       width: 100%;
-      max-width: 320px;
-      border-radius: 6px;
+      max-width: 280px;
+      border-radius: var(--saa-radius-card);
       margin-bottom: 1.75rem;
-      box-shadow: 0 4px 20px rgba(36,38,38,0.12);
+      border: 1px solid var(--saa-sand);
     }
 
-    .audio-player {
+    /* ── Custom audio player ─────────────────────────────────── */
+    .custom-player {
+      background: var(--saa-white);
+      border: 1px solid var(--saa-sand);
+      border-radius: var(--saa-radius-card);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 0;
+    }
+
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    /* Circular play/pause button */
+    .player-play-btn {
+      width: 2.75rem;
+      height: 2.75rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--saa-text);
+      color: var(--saa-cream);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--saa-transition), transform var(--saa-transition);
+    }
+    .player-play-btn:hover  { background: var(--saa-accent); }
+    .player-play-btn:active { transform: scale(0.93); }
+    .player-play-btn svg    { width: 0.875rem; height: 0.875rem; }
+    .player-play-btn .icon-play   { display: block; margin-left: 2px; }
+    .player-play-btn .icon-pause  { display: none; }
+    .player-play-btn.is-playing .icon-play  { display: none; }
+    .player-play-btn.is-playing .icon-pause { display: block; }
+
+    /* Progress track + time */
+    .player-meta {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+    }
+
+    .player-track {
+      position: relative;
+      height: 3px;
+      background: var(--saa-sand);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .player-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: var(--saa-accent);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .player-seek {
+      position: absolute;
+      inset: -12px 0;
       width: 100%;
-      margin-bottom: 2rem;
-      accent-color: var(--color-hover);
+      opacity: 0;
+      cursor: pointer;
+      margin: 0;
+      -webkit-appearance: none;
+    }
+
+    .player-time {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-weight: 300;
+      color: var(--saa-muted);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
     }
 
     .episode-description {
       font-size: 1rem;
       font-weight: 300;
       line-height: 1.75;
-      opacity: 0.85;
+      color: var(--saa-text);
     }
+    .episode-description p + p { margin-top: 1rem; }
 
   </style>
 
@@ -164,16 +247,49 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       )}
 
       {episode.audioUrl ? (
-        <audio
-          controls
-          class="audio-player"
-          preload="metadata"
-        >
-          <source src={episode.audioUrl} type="audio/mpeg" />
-          Your browser does not support the audio element.
-        </audio>
+        <div class="custom-player" id="custom-player">
+          {/* Hidden audio element */}
+          <audio id="ep-audio" preload="metadata" src={episode.audioUrl}></audio>
+
+          <div class="player-row">
+            {/* Play / Pause button */}
+            <button class="player-play-btn" id="ep-play-btn" aria-label="Play episode">
+              {/* Play icon */}
+              <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <polygon points="6,3 20,12 6,21" />
+              </svg>
+              {/* Pause icon */}
+              <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <rect x="5" y="4" width="4" height="16" rx="1"/>
+                <rect x="15" y="4" width="4" height="16" rx="1"/>
+              </svg>
+            </button>
+
+            <div class="player-meta">
+              {/* Progress bar */}
+              <div class="player-track" id="ep-track">
+                <div class="player-fill" id="ep-fill"></div>
+                <input
+                  type="range"
+                  class="player-seek"
+                  id="ep-seek"
+                  min="0"
+                  max="100"
+                  value="0"
+                  step="0.1"
+                  aria-label="Seek"
+                />
+              </div>
+              {/* Time display */}
+              <div class="player-time">
+                <span id="ep-current">0:00</span>
+                <span id="ep-total">–:––</span>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
-        <p style="font-style:italic; opacity:0.5; font-size:0.9rem; margin-bottom:1.5rem;">
+        <p style="font-style:italic; color:var(--saa-muted); font-size:0.9rem; margin-bottom:1.5rem;">
           Audio coming soon.
         </p>
       )}
@@ -189,3 +305,52 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
 
   </article>
 </BaseLayout>
+
+<script>
+  // Custom audio player logic
+  const audio   = document.getElementById('ep-audio')   as HTMLAudioElement | null;
+  const playBtn = document.getElementById('ep-play-btn') as HTMLButtonElement | null;
+  const seekEl  = document.getElementById('ep-seek')     as HTMLInputElement  | null;
+  const fillEl  = document.getElementById('ep-fill')     as HTMLDivElement    | null;
+  const curEl   = document.getElementById('ep-current')  as HTMLElement       | null;
+  const totEl   = document.getElementById('ep-total')    as HTMLElement       | null;
+
+  if (audio && playBtn && seekEl && fillEl && curEl && totEl) {
+    function fmt(s: number): string {
+      if (!s || isNaN(s)) return '–:––';
+      const m   = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    audio.addEventListener('loadedmetadata', () => {
+      totEl.textContent = fmt(audio.duration);
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      if (!audio.duration) return;
+      const pct = (audio.currentTime / audio.duration) * 100;
+      fillEl.style.width = pct + '%';
+      seekEl.value       = String(pct);
+      curEl.textContent  = fmt(audio.currentTime);
+    });
+
+    audio.addEventListener('play',  () => playBtn.classList.add('is-playing'));
+    audio.addEventListener('pause', () => playBtn.classList.remove('is-playing'));
+    audio.addEventListener('ended', () => {
+      playBtn.classList.remove('is-playing');
+      fillEl.style.width = '0%';
+      seekEl.value       = '0';
+      curEl.textContent  = '0:00';
+    });
+
+    playBtn.addEventListener('click', () => {
+      audio.paused ? audio.play() : audio.pause();
+    });
+
+    seekEl.addEventListener('input', () => {
+      if (!audio.duration) return;
+      audio.currentTime = (Number(seekEl.value) / 100) * audio.duration;
+    });
+  }
+</script>

@@ -84,56 +84,101 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
       href={`${siteUrl}/podcast/feed.xml`}
     />
 
-    <!-- ── IBM Plex Serif (Google Fonts) ─────────────────────────── -->
+    <!-- ── IBM Plex Serif + Sans Arabic (Google Fonts) ──────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@100;200;300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap"
       rel="stylesheet"
     />
 
     <!-- ── Global styles ─────────────────────────────────────────── -->
     <style is:global>
+      /* ── Design tokens (SAA style guide) ─────────────────────── */
       :root {
-        --color-bg:    #fefbe1;
-        --color-text:  #242626;
-        --color-hover: #e85b53;
-        --font-serif:  'IBM Plex Serif', Georgia, 'Times New Roman', serif;
+        --saa-white:        #FFFFFF;
+        --saa-cream:        #FFF9ED;
+        --saa-sand:         #FFE4B5;
+        --saa-text:         #2A2A2A;
+        --saa-accent:       #E85B52;
+        --saa-success:      #4BAFD1;
+        --saa-input-bg:     #FFFFFF;
+        --saa-input-border: #D8C89A;
+        --saa-muted:        #8A7B6A;
+        --saa-font:         'IBM Plex Serif', Georgia, 'Times New Roman', serif;
+        --saa-radius-card:  0.75rem;
+        --saa-radius-btn:   1.5625rem;
+        --saa-transition:   0.18s ease;
+
+        /* legacy aliases — keeps existing component code working */
+        --color-bg:    var(--saa-white);
+        --color-text:  var(--saa-text);
+        --color-hover: var(--saa-accent);
+        --font-serif:  var(--saa-font);
       }
 
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      html { font-size: 18px; scroll-behavior: smooth; }
+      html { font-size: 16px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 
       body {
-        font-family: var(--font-serif);
-        background-color: var(--color-bg);
-        color: var(--color-text);
+        font-family: var(--saa-font);
+        background-color: var(--saa-white);
+        color: var(--saa-text);
         min-height: 100vh;
         display: flex;
         flex-direction: column;
         line-height: 1.7;
-        -webkit-font-smoothing: antialiased;
       }
 
       a {
-        color: var(--color-text);
+        color: var(--saa-text);
         text-decoration: underline;
         text-underline-offset: 3px;
-        transition: color 0.15s ease;
+        transition: color var(--saa-transition);
       }
-      a:hover { color: var(--color-hover); }
+      a:hover { color: var(--saa-accent); }
+
+      :focus-visible { outline: 2px solid var(--saa-accent); outline-offset: 3px; }
 
       img { max-width: 100%; height: auto; display: block; }
 
-      /* main has no horizontal padding — alignment is controlled by max-width + 1.5rem padding
-         shared by header__inner, footer__inner, and main itself */
       main { flex: 1; width: 100%; max-width: 940px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+      /* ── Buttons ────────────────────────────────────────────── */
+      .btn {
+        display: inline-block;
+        background: var(--saa-text);
+        color: var(--saa-cream);
+        border: none;
+        border-radius: var(--saa-radius-btn);
+        padding: 0.75rem 2rem;
+        font: 500 0.9375rem var(--saa-font);
+        cursor: pointer;
+        text-decoration: none;
+        transition: background-color var(--saa-transition), color var(--saa-transition);
+      }
+      .btn:hover { background: var(--saa-accent); color: var(--saa-cream); }
+      .btn:focus-visible { outline: 2px solid var(--saa-accent); outline-offset: 3px; }
+      .btn:disabled { opacity: .4; pointer-events: none; }
+
+      .btn-back {
+        background: none;
+        border: none;
+        padding: 0;
+        font: 300 0.875rem var(--saa-font);
+        color: var(--saa-muted);
+        cursor: pointer;
+        text-decoration: none;
+        transition: color var(--saa-transition);
+      }
+      .btn-back:hover { color: var(--saa-accent); }
 
       /* ── Site header ──────────────────────────────────────────── */
       .site-header {
-        border-bottom: 1px solid rgba(36, 38, 38, 0.15);
-        padding: 1rem 0;
+        background: var(--saa-white);
+        border-bottom: 1px solid var(--saa-sand);
+        padding: 1.125rem 0;
       }
       .site-header__inner {
         max-width: 940px;
@@ -145,14 +190,19 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
         gap: 1.5rem;
       }
 
-      /* Brand block: logo + wordmark */
       .site-header__brand {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 0.85rem;
         text-decoration: none;
       }
-      .site-header__logo { height: 48px; width: auto; }
+      .site-header__logo {
+        /* Match exactly the height of the two-line wordmark */
+        height: calc(0.72rem + 3px + 1.35rem);
+        width: auto;
+        filter: brightness(0);
+        display: block;
+      }
 
       .site-header__wordmark {
         display: flex;
@@ -166,20 +216,18 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
         letter-spacing: 0.16em;
         text-transform: uppercase;
         text-decoration: none;
-        color: var(--color-text);
-        opacity: 0.45;
-        transition: opacity 0.15s, color 0.15s;
+        color: var(--saa-muted);
+        transition: color var(--saa-transition);
       }
-      .site-header__archive-link:hover { opacity: 1; color: var(--color-hover); }
+      .site-header__archive-link:hover { color: var(--saa-accent); }
       .site-header__podcast-label {
         font-size: 1.35rem;
         font-weight: 600;
         letter-spacing: 0.01em;
-        color: var(--color-text);
+        color: var(--saa-text);
         text-decoration: none;
       }
 
-      /* Nav */
       .site-nav { display: flex; align-items: center; gap: 1.75rem; }
       .site-nav a {
         font-size: 0.62rem;
@@ -187,15 +235,14 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
         letter-spacing: 0.12em;
         text-transform: uppercase;
         text-decoration: none;
-        color: var(--color-text);
-        opacity: 0.45;
-        transition: opacity 0.15s, color 0.15s;
+        color: var(--saa-muted);
+        transition: color var(--saa-transition);
       }
-      .site-nav a:hover { opacity: 1; color: var(--color-hover); }
+      .site-nav a:hover { color: var(--saa-accent); }
 
       /* ── Site footer ──────────────────────────────────────────── */
       .site-footer {
-        border-top: 1px solid rgba(36, 38, 38, 0.15);
+        border-top: 1px solid var(--saa-sand);
         padding: 2rem 0;
       }
       .site-footer__inner {
@@ -211,13 +258,14 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
       .site-footer__credit {
         font-size: 0.7rem;
         font-weight: 300;
-        opacity: 0.5;
+        color: var(--saa-muted);
       }
       .site-footer__credit a {
-        opacity: 1;
+        color: var(--saa-muted);
         text-decoration: underline;
         text-underline-offset: 2px;
       }
+      .site-footer__credit a:hover { color: var(--saa-accent); }
       .site-footer__social { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
       .site-footer__social a {
         font-size: 0.62rem;
@@ -225,11 +273,10 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
         letter-spacing: 0.1em;
         text-transform: uppercase;
         text-decoration: none;
-        color: var(--color-text);
-        opacity: 0.4;
-        transition: opacity 0.15s, color 0.15s;
+        color: var(--saa-muted);
+        transition: color var(--saa-transition);
       }
-      .site-footer__social a:hover { opacity: 1; color: var(--color-hover); }
+      .site-footer__social a:hover { color: var(--saa-accent); }
     </style>
   </head>
 
@@ -256,7 +303,6 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
         <!-- Nav -->
         <nav aria-label="Main navigation" class="site-nav">
           <a href="/">Episodes</a>
-          <a href="/podcast/feed.xml" aria-label="RSS feed">RSS</a>
           <a href="https://sudanartarchive.com" target="_blank" rel="noopener noreferrer">Archive ↗</a>
         </nav>
 
