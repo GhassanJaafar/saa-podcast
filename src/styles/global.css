@@ -1,16 +1,250 @@
+/* ============================================================
+   Sudan Art Archive — Podcast Global Stylesheet
+   podcast.sudanartarchive.com
+
+   Ported from forms.sudanartarchive.com. Keep the rules intact:
+   one accent colour, serif everywhere, square corners, pill buttons,
+   white → cream → white contrast stack, hover/focus = red.
+   See SAA Forms/STYLE_GUIDE.md.
+   ============================================================ */
+
+/* Fonts are loaded via <link> in BaseLayout.astro — do not @import here */
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap');
+/* ── Design Tokens ──────────────────────────────────────────── */
+:root {
+  /* Brand palette (mirrors sudanartarchive.com Elementor globals) */
+  --saa-sand:      #FFE4B5; /* moccasin — borders, hover tints      */
+  --saa-cream:     #FFF9ED; /* off-white — card backgrounds          */
+  --saa-text:      #2A2A2A; /* near-black — body copy                */
+  --saa-accent:    #E85B52; /* coral red — CTA, links, errors        */
+  --saa-success:   #4BAFD1; /* muted teal — success states only      */
+  --saa-white:     #FFFFFF; /* pure white — page bg, input fields    */
 
+  /* Secondary / label greys */
+  --saa-muted:     #8A7B6A;
+  --saa-muted-2:   #A09070;
+  --saa-footer:    #5A5048;
+
+  --saa-input-bg:     var(--saa-white);
+  --saa-input-border: #D8C89A;
+
+  --saa-font: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+
+  /* Shape — everything square; buttons keep pill shape */
+  --saa-radius-input: 0;
+  --saa-radius-card:  0;         /* square cards */
+  --saa-radius-btn:   1.5625rem; /* 25px — pill, matches Elementor */
+
+  /* Motion */
+  --saa-transition: 0.18s ease;
+}
+
+/* ── Tailwind v4 Theme ──────────────────────────────────────── */
 @theme {
-  /* ── Fonts ── */
-  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-  --font-serif: 'IBM Plex Serif', Georgia, 'Times New Roman', serif;
+  --color-saa-sand:    #FFE4B5;
+  --color-saa-cream:   #FFF9ED;
+  --color-saa-text:    #2A2A2A;
+  --color-saa-accent:  #E85B52;
+  --color-saa-success: #4BAFD1;
+  --color-saa-white:   #FFFFFF;
+  --color-saa-border:  #D8C89A;
+  --color-saa-muted:   #8A7B6A;
 
-  /* ── SAA Colour Palette ── */
-  --color-saa-black:  #1a1a1a;
-  --color-saa-white:  #ffffff;
-  --color-saa-cream:  #f5f4ef;
-  --color-saa-muted:  #6b6b6b;
-  --color-saa-border: #d9d9d9;
+  --color-ink:       #2A2A2A;
+  --color-paper:     #FFFFFF;
+  --color-paper-100: #FFF9ED;
+  --color-paper-200: #FFE4B5;
+  --color-paper-300: #D8C89A;
+  --color-sienna:     #E85B52;
+  --color-sienna-700: #C73E35;
+
+  /* Both font-serif and font-sans resolve to IBM Plex Serif — serif everywhere */
+  --font-serif: "IBM Plex Serif", Georgia, serif;
+  --font-sans:  "IBM Plex Serif", Georgia, serif;
+}
+
+/* ── Arabic font override ───────────────────────────────────── */
+html.lang-ar {
+  --saa-font:   "IBM Plex Sans Arabic", sans-serif;
+  --font-serif: "IBM Plex Sans Arabic", sans-serif;
+  --font-sans:  "IBM Plex Sans Arabic", sans-serif;
+}
+
+/* ── Bilingual visibility ───────────────────────────────────── */
+.ar-text  { display: none; }
+.ar-block { display: none; }
+html.lang-ar .ar-text  { display: inline; }
+html.lang-ar .ar-block { display: block; }
+html.lang-ar .en-text  { display: none; }
+html.lang-ar .en-block { display: none; }
+html.lang-ar main      { direction: rtl; }
+
+/* ── Base Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--saa-font);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--saa-text);
+  background-color: var(--saa-white);
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Typography ─────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--saa-font);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--saa-text);
+  margin: 0 0 0.5em;
+}
+
+h1 { font-size: clamp(1.75rem, 4vw, 2.5rem);   font-weight: 700; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.875rem); }
+h3 { font-size: clamp(1.1rem, 2.5vw, 1.375rem); font-weight: 500; }
+
+p { margin: 0 0 1em; }
+
+a {
+  color: var(--saa-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 0.0625rem;
+  text-underline-offset: 0.1875rem;
+  transition: opacity var(--saa-transition);
+}
+a:hover { opacity: 0.75; }
+
+:focus-visible {
+  outline: 0.125rem solid var(--saa-accent);
+  outline-offset: 0.1875rem;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--saa-font);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--saa-cream);
+  background-color: var(--saa-text);
+  border: none;
+  border-radius: var(--saa-radius-btn);
+  padding: 0.75rem 2rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color var(--saa-transition),
+    color var(--saa-transition);
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:hover { background-color: var(--saa-accent); color: var(--saa-cream); opacity: 1; }
+.btn:focus-visible { outline: 0.125rem solid var(--saa-accent); outline-offset: 0.1875rem; }
+.btn:active { opacity: 0.9; }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+.btn-sm   { font-size: 0.875rem; padding: 0.5625rem 1.375rem; }
+.btn-full { width: 100%; }
+
+.btn-back {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--saa-font);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--saa-text);
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: 0;
+  transition: color var(--saa-transition);
+}
+.btn-back:hover { color: var(--saa-accent); background: none; opacity: 1; }
+.btn-back:focus-visible { outline: 0.125rem solid var(--saa-accent); outline-offset: 0.125rem; }
+
+/* ── Cards ──────────────────────────────────────────────────── */
+/* White page → cream card → white inner elements: 3-level contrast stack */
+.card {
+  background-color: var(--saa-cream);
+  border: 0.0625rem solid var(--saa-sand);
+  border-radius: var(--saa-radius-card);
+  padding: 2rem;
+}
+
+@media (max-width: 40rem) {
+  .card {
+    padding: 1.25rem;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+/* ── Alerts ─────────────────────────────────────────────────── */
+.alert {
+  border-radius: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  border: 0.0625rem solid transparent;
+  border-left-width: 0.25rem;
+}
+.alert-success {
+  background-color: color-mix(in srgb, var(--saa-success) 8%, transparent);
+  border-color: var(--saa-success);
+  color: #1F6B82;
+}
+.alert-error {
+  background-color: color-mix(in srgb, var(--saa-accent) 8%, transparent);
+  border-color: var(--saa-accent);
+  color: #8B2320;
+}
+
+/* ── Utilities ──────────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 0.0625rem; height: 0.0625rem;
+  padding: 0; margin: -0.0625rem;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.divider {
+  border: none;
+  border-top: 0.0625rem solid var(--saa-sand);
+  margin: 1.5rem 0;
+}
+
+/* ── Zero all Tailwind rounded variants (pill .btn is exempt) ── */
+.rounded,
+.rounded-sm,
+.rounded-md,
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl,
+.rounded-3xl,
+.rounded-none {
+  border-radius: 0 !important;
 }

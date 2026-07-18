@@ -1,0 +1,25 @@
+---
+/**
+ * Renders an English and an Arabic variant side by side; the `.lang-ar` class
+ * on <html> decides which one is visible. Arabic falls back to English when a
+ * translation is missing, so a half-translated Sanity document never renders
+ * a blank line.
+ *
+ * Use `block` when the text sits on its own line (the CSS toggles
+ * `display: block` rather than `display: inline`).
+ */
+interface Props {
+  en: string | null | undefined;
+  ar?: string | null;
+  block?: boolean;
+  class?: string;
+}
+
+const { en, ar, block = false, class: className } = Astro.props;
+
+const arabic = ar || en;
+const enClass = [block ? 'en-block' : 'en-text', className].filter(Boolean).join(' ');
+const arClass = [block ? 'ar-block' : 'ar-text', className].filter(Boolean).join(' ');
+---
+
+<span class={enClass}>{en}</span><span class={arClass} dir="rtl">{arabic}</span>

@@ -1,78 +1,180 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import { sanityClient } from "../../lib/sanity";
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import T from '../../components/T.astro';
+import { getEpisode, getSeasons, getSettings, imageUrl, seasonMap } from '../../lib/sanity';
+import { ui } from '../../i18n/ui';
 
-export async function getStaticPaths() {
-  const episodes = await sanityClient.fetch(`
-    *[_type == "episode" && defined(slug.current)] {
-      "slug": slug.current
-    }
-  `);
-  return episodes.map((ep: { slug: string }) => ({
-    params: { slug: ep.slug },
-  }));
-}
-
+// No getStaticPaths — routes are rendered on demand so a new episode published
+// in Sanity is live immediately, without a redeploy.
 const { slug } = Astro.params;
 
-const episode = await sanityClient.fetch(
-  `*[_type == "episode" && slug.current == $slug][0] {
-    title,
-    episodeNumber,
-    "slug": slug.current,
-    publishedAt,
-    description,
-    audioUrl,
-    duration,
-    fileSize,
-    season,
-    explicit,
-    coverImage { asset->{ url } }
-  }`,
-  { slug }
-);
-
+const episode = await getEpisode(slug!);
 if (!episode) {
-  return Astro.redirect("/404");
+  return Astro.rewrite('/404');
 }
 
-const siteUrl = import.meta.env.PUBLIC_SITE_URL || "https://podcast.sudanartarchive.com";
+const [seasons, settings] = await Promise.all([getSeasons(), getSettings()]);
+const season = seasonMap(seasons)[episode.season ?? 1];
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+const siteUrl =
+  import.meta.env.PUBLIC_SITE_URL || Astro.site?.origin || 'https://podcast.sudanartarchive.com';
+
+function formatDate(dateStr: string | undefined, locale: string) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   });
 }
 
-function formatDuration(val: unknown) {
-  if (!val) return null;
-  // Sanity stores duration as "HH:MM:SS" string
-  const parts = String(val).split(":").map(Number);
-  if (parts.length < 2 || parts.some(isNaN)) return null;
+function formatDuration(val: string | undefined, lang: 'en' | 'ar') {
+  if (!val) return '';
+  const parts = String(val).split(':').map(Number);
+  if (parts.length < 2 || parts.some(isNaN)) return '';
   const [h, m, s] = parts.length === 3 ? parts : [0, parts[0], parts[1]];
-  if (h > 0) return `${h} hr ${m} min`;
-  return `${m} min ${String(s ?? 0).padStart(2, "0")} sec`;
+  const hr = ui.hoursShort[lang];
+  const min = ui.minutesShort[lang];
+  const sec = ui.secondsShort[lang];
+  if (h > 0) return `${h} ${hr} ${m} ${min}`;
+  return `${m} ${min} ${String(s ?? 0).padStart(2, '0')} ${sec}`;
 }
 
-const episodeCover = episode.coverImage?.asset?.url;
+// Cover art cascade: episode → season → podcast default
+const cover =
+  imageUrl(episode.coverImage, 640, 640) ||
+  imageUrl(season?.coverImage, 640, 640) ||
+  imageUrl(settings.coverImage, 640, 640);
+
 const ogImage =
-  episodeCover ||
-  import.meta.env.PUBLIC_COVER_IMAGE_URL ||
-  `${siteUrl}/cover-season-1.jpg`;
+  imageUrl(episode.coverImage, 1400, 1400) ||
+  imageUrl(season?.coverImage, 1400, 1400) ||
+  imageUrl(settings.coverImage, 1400, 1400) ||
+  undefined;
+
 const canonicalUrl = `${siteUrl}/episodes/${slug}`;
+const seasonNum = episode.season ?? 1;
 ---
 
 <BaseLayout
   title={episode.title}
-  description={episode.description || `Episode ${episode.episodeNumber} of the Sudan Art Archive Podcast`}
+  description={episode.description || `${ui.episode.en} ${episode.episodeNumber} — ${settings.siteTitle}`}
   ogImage={ogImage}
   canonicalUrl={canonicalUrl}
   type="article"
 >
+  <a href="/" class="back-link">
+    <T en={ui.allEpisodes.en} ar={ui.allEpisodes.ar} />
+  </a>
+
+  <article>
+    <header class="episode-header">
+      <p class="episode-label">
+        <T
+          en={`${ui.season.en} ${seasonNum} · ${ui.episode.en} ${episode.episodeNumber ?? ''}`.trim()}
+          ar={`${ui.season.ar} ${seasonNum} · ${ui.episode.ar} ${episode.episodeNumber ?? ''}`.trim()}
+        />
+      </p>
+
+      <h1><T en={episode.title} ar={episode.titleAr} /></h1>
+
+      <div class="episode-meta">
+        {episode.publishedAt && (
+          <span>
+            <T
+              en={formatDate(episode.publishedAt, 'en-GB')}
+              ar={formatDate(episode.publishedAt, 'ar-EG')}
+            />
+          </span>
+        )}
+        {episode.duration && (
+          <span>
+            <T
+              en={formatDuration(episode.duration, 'en')}
+              ar={formatDuration(episode.duration, 'ar')}
+            />
+          </span>
+        )}
+        {episode.explicit && (
+          <span><T en={ui.explicit.en} ar={ui.explicit.ar} /></span>
+        )}
+      </div>
+
+      {cover && (
+        <img
+          src={cover}
+          alt={`Cover art for ${episode.title}`}
+          class="episode-cover"
+          width="320"
+          height="320"
+        />
+      )}
+
+      {episode.audioUrl ? (
+        <div class="custom-player">
+          <audio id="ep-audio" preload="metadata" src={episode.audioUrl}></audio>
+
+          <div class="player-row">
+            <button
+              class="player-play-btn"
+              id="ep-play-btn"
+              type="button"
+              aria-label={ui.playEpisode.en}
+              data-label-play={ui.playEpisode.en}
+              data-label-pause={ui.pauseEpisode.en}
+            >
+              <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <polygon points="6,3 20,12 6,21" />
+              </svg>
+              <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <rect x="5" y="4" width="4" height="16" rx="1" />
+                <rect x="15" y="4" width="4" height="16" rx="1" />
+              </svg>
+            </button>
+
+            <div class="player-meta">
+              <div class="player-track">
+                <div class="player-fill" id="ep-fill"></div>
+                <input
+                  type="range"
+                  class="player-seek"
+                  id="ep-seek"
+                  min="0"
+                  max="100"
+                  value="0"
+                  step="0.1"
+                  aria-label={ui.seek.en}
+                />
+              </div>
+              <div class="player-time">
+                <span id="ep-current">0:00</span>
+                <span id="ep-total">–:––</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p class="audio-pending">
+          <T en={ui.audioComingSoon.en} ar={ui.audioComingSoon.ar} />
+        </p>
+      )}
+    </header>
+
+    {episode.description && (
+      <div class="episode-description">
+        <div class="en-block">
+          {episode.description.split('\n').map((line) => (line ? <p>{line}</p> : <br />))}
+        </div>
+        <div class="ar-block" dir="rtl">
+          {(episode.descriptionAr || episode.description)
+            .split('\n')
+            .map((line) => (line ? <p>{line}</p> : <br />))}
+        </div>
+      </div>
+    )}
+  </article>
+
   <style>
     .back-link {
       display: inline-block;
@@ -83,12 +185,13 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       margin-bottom: 2rem;
       transition: color var(--saa-transition);
     }
-    .back-link:hover { color: var(--saa-accent); }
+    .back-link:hover { color: var(--saa-accent); opacity: 1; }
     .back-link::before { content: "← "; }
+    :global(html.lang-ar) .back-link::before { content: "→ "; }
 
     .episode-header {
       background: var(--saa-cream);
-      border: 1px solid var(--saa-sand);
+      border: 0.0625rem solid var(--saa-sand);
       border-radius: var(--saa-radius-card);
       padding: 2rem;
       margin-bottom: 2rem;
@@ -100,7 +203,7 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--saa-muted);
-      margin-bottom: 0.6rem;
+      margin: 0 0 0.6rem;
     }
 
     h1 {
@@ -122,19 +225,24 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
 
     .episode-cover {
       width: 100%;
-      max-width: 280px;
-      border-radius: var(--saa-radius-card);
+      max-width: 17.5rem;
       margin-bottom: 1.75rem;
-      border: 1px solid var(--saa-sand);
+      border: 0.0625rem solid var(--saa-sand);
+    }
+
+    .audio-pending {
+      font-style: italic;
+      color: var(--saa-muted);
+      font-size: 0.9rem;
+      margin-bottom: 0;
     }
 
     /* ── Custom audio player ─────────────────────────────────── */
     .custom-player {
       background: var(--saa-white);
-      border: 1px solid var(--saa-sand);
+      border: 0.0625rem solid var(--saa-sand);
       border-radius: var(--saa-radius-card);
       padding: 1.25rem 1.5rem;
-      margin-bottom: 0;
     }
 
     .player-row {
@@ -143,7 +251,6 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       gap: 1.25rem;
     }
 
-    /* Circular play/pause button */
     .player-play-btn {
       width: 2.75rem;
       height: 2.75rem;
@@ -161,12 +268,11 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
     .player-play-btn:hover  { background: var(--saa-accent); }
     .player-play-btn:active { transform: scale(0.93); }
     .player-play-btn svg    { width: 0.875rem; height: 0.875rem; }
-    .player-play-btn .icon-play   { display: block; margin-left: 2px; }
-    .player-play-btn .icon-pause  { display: none; }
+    .player-play-btn .icon-play  { display: block; margin-left: 0.125rem; }
+    .player-play-btn .icon-pause { display: none; }
     .player-play-btn.is-playing .icon-play  { display: none; }
-    .player-play-btn.is-playing .icon-pause { display: block; }
+    .player-play-btn.is-playing .icon-pause { display: block; margin-left: 0; }
 
-    /* Progress track + time */
     .player-meta {
       flex: 1;
       display: flex;
@@ -176,9 +282,8 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
 
     .player-track {
       position: relative;
-      height: 3px;
+      height: 0.1875rem;
       background: var(--saa-sand);
-      border-radius: 2px;
       cursor: pointer;
     }
     .player-fill {
@@ -186,17 +291,17 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       inset: 0 auto 0 0;
       width: 0%;
       background: var(--saa-accent);
-      border-radius: 2px;
       pointer-events: none;
     }
     .player-seek {
       position: absolute;
-      inset: -12px 0;
+      inset: -0.75rem 0;
       width: 100%;
       opacity: 0;
       cursor: pointer;
       margin: 0;
       -webkit-appearance: none;
+      appearance: none;
     }
 
     .player-time {
@@ -207,6 +312,8 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       color: var(--saa-muted);
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
+      /* Time always reads left-to-right, even in Arabic */
+      direction: ltr;
     }
 
     .episode-description {
@@ -215,100 +322,17 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       line-height: 1.75;
       color: var(--saa-text);
     }
-    .episode-description p + p { margin-top: 1rem; }
+    .episode-description p { margin: 0 0 1rem; }
 
+    @media (max-width: 30rem) {
+      .episode-header { padding: 1.25rem; }
+      .custom-player { padding: 1rem; }
+    }
   </style>
-
-  <a href="/" class="back-link">All episodes</a>
-
-  <article>
-    <header class="episode-header">
-      <p class="episode-label">
-        {episode.season ? `Season ${episode.season} · ` : ""}
-        {episode.episodeNumber ? `Episode ${episode.episodeNumber}` : "Episode"}
-      </p>
-
-      <h1>{episode.title}</h1>
-
-      <div class="episode-meta">
-        {episode.publishedAt && <span>{formatDate(episode.publishedAt)}</span>}
-        {episode.duration    && <span>{formatDuration(episode.duration)}</span>}
-        {episode.explicit    && <span>Explicit</span>}
-      </div>
-
-      {episodeCover && (
-        <img
-          src={episodeCover}
-          alt={`Cover art for ${episode.title}`}
-          class="episode-cover"
-          width="320"
-          height="320"
-        />
-      )}
-
-      {episode.audioUrl ? (
-        <div class="custom-player" id="custom-player">
-          {/* Hidden audio element */}
-          <audio id="ep-audio" preload="metadata" src={episode.audioUrl}></audio>
-
-          <div class="player-row">
-            {/* Play / Pause button */}
-            <button class="player-play-btn" id="ep-play-btn" aria-label="Play episode">
-              {/* Play icon */}
-              <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <polygon points="6,3 20,12 6,21" />
-              </svg>
-              {/* Pause icon */}
-              <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <rect x="5" y="4" width="4" height="16" rx="1"/>
-                <rect x="15" y="4" width="4" height="16" rx="1"/>
-              </svg>
-            </button>
-
-            <div class="player-meta">
-              {/* Progress bar */}
-              <div class="player-track" id="ep-track">
-                <div class="player-fill" id="ep-fill"></div>
-                <input
-                  type="range"
-                  class="player-seek"
-                  id="ep-seek"
-                  min="0"
-                  max="100"
-                  value="0"
-                  step="0.1"
-                  aria-label="Seek"
-                />
-              </div>
-              {/* Time display */}
-              <div class="player-time">
-                <span id="ep-current">0:00</span>
-                <span id="ep-total">–:––</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <p style="font-style:italic; color:var(--saa-muted); font-size:0.9rem; margin-bottom:1.5rem;">
-          Audio coming soon.
-        </p>
-      )}
-    </header>
-
-    {episode.description && (
-      <div class="episode-description">
-        {episode.description.split("\n").map((line: string) =>
-          line ? <p>{line}</p> : <br />
-        )}
-      </div>
-    )}
-
-  </article>
 </BaseLayout>
 
 <script>
-  // Custom audio player logic
-  const audio   = document.getElementById('ep-audio')   as HTMLAudioElement | null;
+  const audio   = document.getElementById('ep-audio')    as HTMLAudioElement | null;
   const playBtn = document.getElementById('ep-play-btn') as HTMLButtonElement | null;
   const seekEl  = document.getElementById('ep-seek')     as HTMLInputElement  | null;
   const fillEl  = document.getElementById('ep-fill')     as HTMLDivElement    | null;
@@ -316,12 +340,12 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
   const totEl   = document.getElementById('ep-total')    as HTMLElement       | null;
 
   if (audio && playBtn && seekEl && fillEl && curEl && totEl) {
-    function fmt(s: number): string {
+    const fmt = (s: number): string => {
       if (!s || isNaN(s)) return '–:––';
       const m   = Math.floor(s / 60);
       const sec = Math.floor(s % 60);
       return `${m}:${sec.toString().padStart(2, '0')}`;
-    }
+    };
 
     audio.addEventListener('loadedmetadata', () => {
       totEl.textContent = fmt(audio.duration);
@@ -335,17 +359,25 @@ const canonicalUrl = `${siteUrl}/episodes/${slug}`;
       curEl.textContent  = fmt(audio.currentTime);
     });
 
-    audio.addEventListener('play',  () => playBtn.classList.add('is-playing'));
-    audio.addEventListener('pause', () => playBtn.classList.remove('is-playing'));
+    audio.addEventListener('play', () => {
+      playBtn.classList.add('is-playing');
+      playBtn.setAttribute('aria-label', playBtn.dataset.labelPause || 'Pause');
+    });
+    audio.addEventListener('pause', () => {
+      playBtn.classList.remove('is-playing');
+      playBtn.setAttribute('aria-label', playBtn.dataset.labelPlay || 'Play');
+    });
     audio.addEventListener('ended', () => {
       playBtn.classList.remove('is-playing');
+      playBtn.setAttribute('aria-label', playBtn.dataset.labelPlay || 'Play');
       fillEl.style.width = '0%';
       seekEl.value       = '0';
       curEl.textContent  = '0:00';
     });
 
     playBtn.addEventListener('click', () => {
-      audio.paused ? audio.play() : audio.pause();
+      if (audio.paused) audio.play();
+      else audio.pause();
     });
 
     seekEl.addEventListener('input', () => {

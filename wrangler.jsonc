@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "saa-podcast",
+  "compatibility_date": "2026-04-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+  // `main` and the ASSETS binding are injected by @astrojs/cloudflare at build
+  // time — don't set them here or the build can't resolve the entrypoint.
+}

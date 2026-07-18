@@ -1,0 +1,201 @@
+# SAA Podcast — Agent Instructions
+
+Context and working conventions for Claude Code or any other LLM agent working in this
+repository. Read this before making changes. Sister project: **SAA Forms**
+(`forms.sudanartarchive.com`) — it is the more polished of the two and is the reference for
+style, tone and structure.
+
+---
+
+## What this project is
+
+The **Sudan Art Archive podcast** at **podcast.sudanartarchive.com** — a public, bilingual
+(English / Arabic) site listing podcast episodes, with an audio player and an RSS feed that
+Apple Podcasts and other directories subscribe to.
+
+- Live site: https://podcast.sudanartarchive.com
+- Main archive site (separate project): https://sudanartarchive.com
+- Submissions portal (sister project): https://forms.sudanartarchive.com
+
+---
+
+## Architecture
+
+```
+Sanity (content + images)            Cloudflare R2 (audio only)
+        │                                      │
+        └──────────────┬───────────────────────┘
+                       ▼
+        Astro SSR — Cloudflare Workers
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+   /  (episodes)  /episodes/[slug]  /podcast/feed.xml
+```
+
+**Sanity is the database.** Every piece of copy — site title, header, footer, social links,
+SEO keywords, RSS channel metadata, cover art — lives in the `podcastSettings` singleton.
+Nothing user-facing should be hard-coded in the Astro app.
+
+**The MP3 is the one asset outside Sanity.** Episodes carry an `audioUrl` pointing at a public
+Cloudflare R2 object. Cover art is a Sanity image, served through the Sanity CDN.
+
+Every route is server-rendered (`output: 'server'`, `useCdn: false`), so publishing in Studio
+is live on the next request — no rebuild, no redeploy.
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Astro 6 (`output: 'server'`, SSR) |
+| Adapter / host | `@astrojs/cloudflare` → **Cloudflare Workers** |
+| Styling | Tailwind CSS v4 (`@tailwindcss/vite`) + `src/styles/global.css` tokens |
+| CMS / database | **Sanity** (project `joj4u8dz`, dataset `production`) |
+| Audio hosting | **Cloudflare R2** (public bucket, URL pasted into the episode) |
+| Source | GitHub `GhassanJaafar/saa-podcast` |
+
+> ⚠️ This project was **migrated off Vercel**. Do not reintroduce `@astrojs/vercel`,
+> `vercel.json`, or `.vercel/`. If you see references to them, they are leftovers to remove,
+> not patterns to follow.
+
+---
+
+## Sanity schema
+
+Studio lives in the sibling `sanity/` folder (see *Known issues* below).
+
+| Type | Purpose |
+|---|---|
+| `podcastSettings` | Singleton. All site-wide copy, SEO and RSS channel config. Grouped into Identity / Header / Footer / SEO / Feed tabs. |
+| `season` | One per season. Optional title + cover art. Joined to episodes by `number`. |
+| `episode` | One per episode. Bilingual title/description, R2 `audioUrl`, duration, byte size, cover art. |
+
+Episodes store `season` as a **number**, matched against `season.number` — not a reference.
+This was deliberate: existing episode documents already used a numeric field, and a reference
+would have required a data migration.
+
+Artwork falls back in a cascade everywhere: **episode → season → podcast default**.
+
+---
+
+## Bilingual system
+
+Copied wholesale from SAA Forms. A `.lang-ar` class on `<html>` drives everything — no i18n
+routing, no round-trip, no reload.
+
+- Both languages are always rendered into the markup; CSS shows one and hides the other.
+- `src/components/T.astro` renders an EN/AR pair and **falls back to English** when the Arabic
+  field is empty, so a half-translated Sanity document never renders a blank line.
+- `src/i18n/ui.ts` holds interface chrome only ("Episodes", "All episodes", …). Editorial
+  content is bilingual **in Sanity**, via the `*Ar` fields.
+- An inline pre-paint script in `<head>` reads `localStorage.saa_lang` before first paint to
+  avoid a flash of English.
+- Meta tags (`<title>`, `og:`, `twitter:`) are single-language by nature — always English.
+
+---
+
+## Styling
+
+Source of truth is **SAA Forms `STYLE_GUIDE.md`**. The short version:
+
+- One accent colour (coral `#E85B52`). Never add a second brand colour.
+- Serif everywhere (IBM Plex Serif); IBM Plex Sans Arabic when Arabic is active.
+- **Square** corners on everything; buttons are the sole exception (25px pill).
+- The 3-level contrast stack does the separating, not shadows:
+  white page → cream card (`#FFF9ED`) → white inner elements.
+- Hover and focus both go red. One transition speed: `0.18s ease`.
+
+Containers are `56rem`, matching Forms.
+
+---
+
+## Deploying
+
+```bash
+npm run build     # astro build
+npm run deploy    # astro build && wrangler deploy
+npm run preview   # astro build && wrangler dev  (local Workers runtime)
+```
+
+### ⚠️ Two wrangler configs — deploy with the generated one
+
+This is the single easiest thing to get wrong in this repo.
+
+- `wrangler.jsonc` (repo root) is the **input**. It is deliberately minimal — it carries the
+  worker name, compat date and flags, nothing else. **Do not set `main` or `assets` here**;
+  `main` would point at a file that does not exist until after the build, and the build fails
+  trying to resolve it.
+- `dist/server/wrangler.json` is the **output**, written by `@astrojs/cloudflare` during the
+  build. It is the one with `main: entry.mjs` and `assets.directory: ../client`.
+
+Every `wrangler` invocation must therefore pass `--config dist/server/wrangler.json`. The npm
+scripts already do. Running a bare `wrangler deploy` picks up the root config, which declares
+no assets directory — the Worker deploys but **every static file 404s** (favicon, logo,
+`/_astro/*` CSS and JS), and routing misbehaves. The site looks broken in a way that does not
+reproduce in `astro dev`, because `astro dev` serves `public/` itself and never touches
+wrangler.
+
+If a change looks fine in `npm run dev` but broken once deployed, reproduce it with
+`npm run preview` — that runs the built output in the real `workerd` runtime.
+
+Sessions are pinned to an in-memory driver in `astro.config.mjs`. That is not a stray setting:
+without it the adapter auto-injects a `SESSION` KV binding that would need a real KV namespace
+provisioned before `wrangler deploy` succeeds. The site is read-only and uses no sessions.
+
+### Environment variables
+
+Set these in the Cloudflare dashboard (they are inlined at build time, so they must be present
+during the build, not just at runtime):
+
+| Variable | Purpose |
+|---|---|
+| `PUBLIC_SANITY_PROJECT_ID` | Sanity project (`joj4u8dz`) |
+| `PUBLIC_SANITY_DATASET` | `production` |
+| `PUBLIC_SITE_URL` | `https://podcast.sudanartarchive.com` — used for canonicals and feed URLs |
+
+`PUBLIC_COVER_IMAGE_URL` is **no longer used** — cover art comes from `podcastSettings`.
+
+### Security headers
+
+They used to live in `vercel.json`; they are now in `src/middleware.ts`, which covers both SSR
+responses and static assets. If you add a new external origin (a font host, an image CDN), the
+CSP there must be updated or the browser will block it.
+
+---
+
+## The RSS feed
+
+`/podcast/feed.xml` is what Apple Podcasts actually reads. It is the highest-stakes route in
+the project — a malformed feed silently de-lists the show. Things that are easy to get wrong:
+
+- **Enclosure MIME type must match the file extension.** Declaring a `.wav` as `audio/mpeg`
+  gets the feed rejected. `audioMimeType()` derives it from the URL.
+- **`<itunes:owner><itunes:email>` must be non-empty** — Apple uses it to verify ownership.
+- **Cover art must be square, ≥1400px, and must not 404.** The channel `<image>` block is
+  omitted entirely rather than emitted with a broken URL.
+- **`length` (byte size) should be accurate** — podcast apps use it for the download progress
+  bar. It is the `fileSize` field on the episode.
+
+After changing this route, validate at https://podba.se/validate.
+
+---
+
+## Known issues / things to pick up
+
+- **`sanity/` is not under version control.** Only `astro/` is a git repository. The Studio
+  schema currently lives outside any repo, so schema changes are not tracked or backed up.
+  SAA Forms solves this by being a monorepo (`frontend/` + `studio/`); this project should
+  probably do the same.
+- **The `podcastSettings` document does not exist in Sanity yet.** `getSettings()` merges
+  against a full set of English + Arabic defaults, so the site renders correctly without it —
+  but the cover art, which has no default, falls back to the newest episode's image. Create
+  the document in Studio and fill in the cover art.
+- Episode `duration` is entered by hand and is not validated against the actual audio file.
+  The test episode currently claims `00:03:30` for a file that is 7:02 long.
+- `public/favicon.svg` and `public/logo.svg` are byte-identical (same 140×111 brand mark).
+  `favicon.ico` and `apple-touch-icon.png` are generated from that SVG; if the mark changes,
+  regenerate them rather than renaming files. **`favicon.ico` used to be an SVG renamed to
+  `.ico`**, which browsers silently refuse to render — it is a real ICO container now
+  (16/32/48px PNG entries). SAA Forms may still have the same misnamed file.

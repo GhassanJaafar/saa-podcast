@@ -1,13 +1,21 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import T from '../components/T.astro';
+import { ui } from '../i18n/ui';
 
 Astro.response.status = 404;
 ---
 
-<BaseLayout
-  title="Page Not Found"
-  description="The page you're looking for doesn't exist."
->
+<BaseLayout title={ui.notFoundTitle.en} description={ui.notFoundBody.en} noindex>
+  <div class="not-found">
+    <span class="not-found__code">404</span>
+    <h1><T en={ui.notFoundTitle.en} ar={ui.notFoundTitle.ar} /></h1>
+    <p><T en={ui.notFoundBody.en} ar={ui.notFoundBody.ar} block /></p>
+    <a href="/" class="not-found__back">
+      <T en={ui.backToEpisodes.en} ar={ui.backToEpisodes.ar} />
+    </a>
+  </div>
+
   <style>
     .not-found {
       padding: 4rem 0;
@@ -28,6 +36,7 @@ Astro.response.status = 404;
       font-weight: 300;
       line-height: 1;
       letter-spacing: -0.02em;
+      margin: 0;
     }
     .not-found p {
       font-size: 0.9375rem;
@@ -35,6 +44,7 @@ Astro.response.status = 404;
       color: var(--saa-muted);
       max-width: 42ch;
       line-height: 1.6;
+      margin: 0;
     }
     .not-found__back {
       margin-top: 0.5rem;
@@ -44,17 +54,14 @@ Astro.response.status = 404;
       text-transform: uppercase;
       text-decoration: none;
       color: var(--saa-muted);
-      border-bottom: 1px solid var(--saa-sand);
-      padding-bottom: 2px;
+      border-bottom: 0.0625rem solid var(--saa-sand);
+      padding-bottom: 0.125rem;
       transition: color var(--saa-transition), border-color var(--saa-transition);
     }
-    .not-found__back:hover { color: var(--saa-accent); border-color: var(--saa-accent); }
+    .not-found__back:hover {
+      color: var(--saa-accent);
+      border-color: var(--saa-accent);
+      opacity: 1;
+    }
   </style>
-
-  <div class="not-found">
-    <span class="not-found__code">404</span>
-    <h1>Page Not Found</h1>
-    <p>The page you're looking for doesn't exist or may have been moved.</p>
-    <a href="/" class="not-found__back">← Back to Episodes</a>
-  </div>
 </BaseLayout>

@@ -1,189 +1,227 @@
 ---
 /**
- * BaseLayout.astro
- * Central layout for all SAA Podcast pages.
+ * BaseLayout.astro — central layout for all SAA Podcast pages.
  *
- * Props:
- *   title        - Page <title> (will be appended with " | SAA Podcast")
- *   description  - Meta description / OG description
- *   ogImage      - Absolute URL for OG + Twitter card image (optional)
- *                  Defaults to /cover-season-1.jpg
- *   canonicalUrl - Full canonical URL for this page (optional)
- *   type         - OG type, defaults to "website"
+ * All header, footer, SEO and identity copy comes from the `podcastSettings`
+ * singleton in Sanity; nothing here is hard-coded. Structure and styling mirror
+ * forms.sudanartarchive.com — see SAA Forms/STYLE_GUIDE.md.
  */
+import '../styles/global.css';
+import T from '../components/T.astro';
+import { getSettings, imageUrl } from '../lib/sanity';
+import { ui } from '../i18n/ui';
 
+// Meta tags carry a single language, so there are no bilingual props here —
+// <title>, og: and twitter: values are always the English variant.
 interface Props {
   title: string;
   description?: string;
   ogImage?: string;
   canonicalUrl?: string;
-  type?: string;
+  type?: 'website' | 'article';
+  noindex?: boolean;
 }
+
+const settings = await getSettings();
 
 const {
   title,
-  description = "A podcast by Sudan Art Archive — Preserving 50 Years of Sudanese Artistry!",
+  description = settings.description,
   ogImage,
   canonicalUrl,
-  type = "website",
+  type = 'website',
+  noindex = false,
 } = Astro.props;
 
-const siteName  = "SAA Podcast";
-const siteUrl   = import.meta.env.PUBLIC_SITE_URL || "https://podcast.sudanartarchive.com";
-const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
+const siteUrl = import.meta.env.PUBLIC_SITE_URL || Astro.site?.origin || 'https://podcast.sudanartarchive.com';
+const shortTitle = settings.shortTitle || settings.siteTitle;
+const fullTitle = title === shortTitle ? title : `${title} | ${shortTitle}`;
 
-// Cover image: prefer prop, then env var, then default path
-const coverImage =
-  ogImage ||
-  import.meta.env.PUBLIC_COVER_IMAGE_URL ||
-  `${siteUrl}/cover-season-1.jpg`;
-
-const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
+const canonical = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
+const cover = ogImage || imageUrl(settings.coverImage, 1400, 1400) || `${siteUrl}/cover-season-1.jpg`;
+const feedUrl = `${siteUrl}/podcast/feed.xml`;
+const year = new Date().getFullYear();
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- ── Favicon ───────────────────────────────────────────────── -->
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- ── Primary SEO ──────────────────────────────────────────── -->
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    {settings.keywords && <meta name="keywords" content={settings.keywords} />}
+    <meta name="author" content={settings.author} />
+    <meta name="robots" content={noindex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1'} />
     <link rel="canonical" href={canonical} />
 
-    <!-- ── Open Graph (Facebook, WhatsApp, iMessage link previews) ─ -->
+    <!-- ── Open Graph ───────────────────────────────────────────── -->
     <meta property="og:type"        content={type} />
-    <meta property="og:site_name"   content={siteName} />
+    <meta property="og:site_name"   content={settings.siteTitle} />
     <meta property="og:title"       content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url"         content={canonical} />
-    <meta property="og:image"       content={coverImage} />
+    <meta property="og:image"       content={cover} />
     <meta property="og:image:width"  content="1400" />
     <meta property="og:image:height" content="1400" />
-    <meta property="og:image:alt"   content="Sudan Art Archive Podcast cover art" />
+    <meta property="og:image:alt"   content={`${settings.siteTitle} cover art`} />
     <meta property="og:locale"      content="en_US" />
+    <meta property="og:locale:alternate" content="ar_SD" />
 
-    <!-- ── Twitter / X Card ─────────────────────────────────────── -->
+    <!-- ── Twitter / X ──────────────────────────────────────────── -->
     <meta name="twitter:card"        content="summary_large_image" />
     <meta name="twitter:title"       content={fullTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image"       content={coverImage} />
-    <meta name="twitter:image:alt"   content="Sudan Art Archive Podcast cover art" />
+    <meta name="twitter:image"       content={cover} />
+    <meta name="twitter:image:alt"   content={`${settings.siteTitle} cover art`} />
 
-    <!-- ── RSS autodiscovery ─────────────────────────────────────── -->
-    <link
-      rel="alternate"
-      type="application/rss+xml"
-      title={siteName}
-      href={`${siteUrl}/podcast/feed.xml`}
-    />
+    <!-- ── RSS autodiscovery ────────────────────────────────────── -->
+    <link rel="alternate" type="application/rss+xml" title={settings.siteTitle} href={feedUrl} />
 
-    <!-- ── IBM Plex Serif + Sans Arabic (Google Fonts) ──────────── -->
+    <!-- ── Favicons & theme ─────────────────────────────────────── -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#FFF9ED" />
+
+    <!-- ── IBM Plex Serif + IBM Plex Sans Arabic ────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@100;200;300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans+Arabic:wght@100;200;300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
 
-    <!-- ── Global styles ─────────────────────────────────────────── -->
-    <style is:global>
-      /* ── Design tokens (SAA style guide) ─────────────────────── */
-      :root {
-        --saa-white:        #FFFFFF;
-        --saa-cream:        #FFF9ED;
-        --saa-sand:         #FFE4B5;
-        --saa-text:         #2A2A2A;
-        --saa-accent:       #E85B52;
-        --saa-success:      #4BAFD1;
-        --saa-input-bg:     #FFFFFF;
-        --saa-input-border: #D8C89A;
-        --saa-muted:        #8A7B6A;
-        --saa-font:         'IBM Plex Serif', Georgia, 'Times New Roman', serif;
-        --saa-radius-card:  0.75rem;
-        --saa-radius-btn:   1.5625rem;
-        --saa-transition:   0.18s ease;
+    <!-- ── Structured data ──────────────────────────────────────── -->
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'PodcastSeries',
+          '@id': `${siteUrl}/#podcast`,
+          name: settings.siteTitle,
+          url: siteUrl,
+          description: settings.description,
+          image: cover,
+          webFeed: feedUrl,
+          inLanguage: ['en', 'ar'],
+          author: { '@type': 'Organization', name: settings.author },
+        },
+        {
+          '@type': 'Organization',
+          '@id': 'https://sudanartarchive.com/#organization',
+          name: 'Sudan Art Archive',
+          alternateName: 'أرشيف السودان للفن التشكيلي',
+          url: settings.archiveUrl,
+          parentOrganization: {
+            '@type': 'Organization',
+            name: settings.parentOrgName,
+            url: settings.parentOrgUrl,
+          },
+        },
+      ],
+    })} />
 
-        /* legacy aliases — keeps existing component code working */
-        --color-bg:    var(--saa-white);
-        --color-text:  var(--saa-text);
-        --color-hover: var(--saa-accent);
-        --font-serif:  var(--saa-font);
-      }
+    <!-- ── Apply saved language before first paint ──────────────── -->
+    <script is:inline>
+      (function () {
+        try {
+          if (localStorage.getItem('saa_lang') === 'ar') {
+            document.documentElement.classList.add('lang-ar');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
 
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <body>
+    <!-- ── Header ───────────────────────────────────────────────── -->
+    <header class="site-header">
+      <div class="site-header__inner">
 
-      html { font-size: 16px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+        <a href="/" class="site-header__brand" aria-label={settings.siteTitle}>
+          <img
+            src="/logo.svg"
+            alt={settings.siteTitle}
+            class="site-header__logo"
+            width="210"
+            height="166"
+          />
+          <span class="site-header__wordmark">
+            <span class="site-header__eyebrow">
+              <T en={settings.headerEyebrow} ar={settings.headerEyebrowAr} />
+            </span>
+            <span class="site-header__label">
+              <T en={settings.headerWordmark} ar={settings.headerWordmarkAr} />
+            </span>
+          </span>
+        </a>
 
-      body {
-        font-family: var(--saa-font);
-        background-color: var(--saa-white);
-        color: var(--saa-text);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        line-height: 1.7;
-      }
+        <div class="site-header__right">
+          <nav aria-label={ui.mainNav.en} class="site-nav">
+            {settings.archiveUrl && (
+              <a
+                href={settings.archiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="site-header__archive-link"
+              >
+                {settings.archiveLinkLabel}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+            )}
+          </nav>
 
-      a {
-        color: var(--saa-text);
-        text-decoration: underline;
-        text-underline-offset: 3px;
-        transition: color var(--saa-transition);
-      }
-      a:hover { color: var(--saa-accent); }
+          <button id="lang-toggle" class="site-header__lang-btn" type="button">
+            <span class="en-text" style="font-family: 'IBM Plex Sans Arabic', sans-serif;">العربية</span>
+            <span class="ar-text" style="font-family: 'IBM Plex Serif', serif;">English</span>
+          </button>
+        </div>
 
-      :focus-visible { outline: 2px solid var(--saa-accent); outline-offset: 3px; }
+      </div>
+    </header>
 
-      img { max-width: 100%; height: auto; display: block; }
+    <main id="main-content">
+      <slot />
+    </main>
 
-      main { flex: 1; width: 100%; max-width: 940px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+    <!-- ── Footer ───────────────────────────────────────────────── -->
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <p class="site-footer__credit">
+          &copy; {year}{' '}
+          <a href={settings.parentOrgUrl} target="_blank" rel="noopener noreferrer" class="site-footer__link">
+            {settings.parentOrgName}
+          </a>{' '}
+          <T en={ui.allRightsReserved.en} ar={ui.allRightsReserved.ar} />
+        </p>
 
-      /* ── Buttons ────────────────────────────────────────────── */
-      .btn {
-        display: inline-block;
-        background: var(--saa-text);
-        color: var(--saa-cream);
-        border: none;
-        border-radius: var(--saa-radius-btn);
-        padding: 0.75rem 2rem;
-        font: 500 0.9375rem var(--saa-font);
-        cursor: pointer;
-        text-decoration: none;
-        transition: background-color var(--saa-transition), color var(--saa-transition);
-      }
-      .btn:hover { background: var(--saa-accent); color: var(--saa-cream); }
-      .btn:focus-visible { outline: 2px solid var(--saa-accent); outline-offset: 3px; }
-      .btn:disabled { opacity: .4; pointer-events: none; }
+        {settings.socialLinks && settings.socialLinks.length > 0 && (
+          <nav aria-label={ui.socialLinks.en} class="site-footer__social">
+            {settings.socialLinks.map((link) => (
+              <a href={link.url} target="_blank" rel="noopener noreferrer" class="site-footer__link">
+                {link.label}
+              </a>
+            ))}
+          </nav>
+        )}
+      </div>
+    </footer>
 
-      .btn-back {
-        background: none;
-        border: none;
-        padding: 0;
-        font: 300 0.875rem var(--saa-font);
-        color: var(--saa-muted);
-        cursor: pointer;
-        text-decoration: none;
-        transition: color var(--saa-transition);
-      }
-      .btn-back:hover { color: var(--saa-accent); }
-
-      /* ── Site header ──────────────────────────────────────────── */
+    <style>
+      /* ── Header ─────────────────────────────────────────────── */
       .site-header {
         background: var(--saa-white);
-        border-bottom: 1px solid var(--saa-sand);
-        padding: 1.125rem 0;
+        border-bottom: 0.0625rem solid var(--saa-sand);
       }
       .site-header__inner {
-        max-width: 940px;
+        max-width: 56rem;
         margin: 0 auto;
-        padding: 0 1.5rem;
+        padding: 1.125rem 1.5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -192,139 +230,149 @@ const canonical = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
 
       .site-header__brand {
         display: flex;
-        align-items: flex-start;
-        gap: 0.85rem;
+        align-items: center;
+        gap: 0.875rem;
         text-decoration: none;
       }
       .site-header__logo {
-        /* Match exactly the height of the two-line wordmark */
-        height: calc(0.72rem + 3px + 1.35rem);
+        height: 2.5rem;
         width: auto;
+        flex-shrink: 0;
         filter: brightness(0);
-        display: block;
       }
-
       .site-header__wordmark {
         display: flex;
         flex-direction: column;
-        gap: 3px;
         line-height: 1;
       }
-      .site-header__archive-link {
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.16em;
+      .site-header__eyebrow {
+        font-family: 'IBM Plex Serif', serif;
+        font-size: 0.625rem;
+        font-weight: 400;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
-        text-decoration: none;
-        white-space: nowrap;
         color: var(--saa-muted);
-        transition: color var(--saa-transition);
+        line-height: 1;
       }
-      .site-header__archive-link:hover { color: var(--saa-accent); }
-      .site-header__podcast-label {
-        font-size: 1.35rem;
-        font-weight: 600;
-        letter-spacing: 0.01em;
+      html.lang-ar .site-header__eyebrow {
+        font-family: 'IBM Plex Sans Arabic', sans-serif;
+        font-size: 0.6875rem;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      .site-header__label {
+        font-family: var(--saa-font);
+        font-size: 0.9375rem;
+        font-weight: 400;
+        color: var(--saa-text);
+        line-height: 1.5;
+      }
+
+      .site-header__right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .site-nav {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .site-header__archive-link {
+        font-family: var(--saa-font);
+        font-size: 0.75rem;
         color: var(--saa-text);
         text-decoration: none;
-      }
-
-      .site-nav { display: flex; align-items: center; gap: 1.75rem; }
-      .site-nav a {
-        font-size: 0.62rem;
-        font-weight: 600;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        text-decoration: none;
-        color: var(--saa-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
         transition: color var(--saa-transition);
       }
-      .site-nav a:hover { color: var(--saa-accent); }
+      .site-header__archive-link:hover { color: var(--saa-accent); opacity: 1; }
 
-      /* ── Site footer ──────────────────────────────────────────── */
+      .site-header__lang-btn {
+        background: none;
+        border: 0.0625rem solid var(--saa-sand);
+        border-radius: 0;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.75rem;
+        color: var(--saa-text);
+        cursor: pointer;
+        letter-spacing: 0.03em;
+        transition: border-color var(--saa-transition);
+        white-space: nowrap;
+      }
+      .site-header__lang-btn:hover { border-color: var(--saa-text); }
+
+      @media (max-width: 30rem) {
+        .site-header__inner { padding: 0.875rem 1rem; }
+        .site-header__archive-link { display: none; }
+        .site-header__lang-btn { padding: 0.3rem 0.5rem; }
+      }
+
+      /* ── Main ───────────────────────────────────────────────── */
+      main {
+        flex: 1;
+        width: 100%;
+        max-width: 56rem;
+        margin: 0 auto;
+        padding: 3rem 1.5rem 5rem;
+      }
+      @media (max-width: 30rem) {
+        main { padding: 2rem 1rem 3.5rem; }
+      }
+
+      /* ── Footer ─────────────────────────────────────────────── */
       .site-footer {
-        border-top: 1px solid var(--saa-sand);
+        border-top: 0.0625rem solid var(--saa-sand);
         padding: 2rem 0;
       }
       .site-footer__inner {
-        max-width: 940px;
+        max-width: 56rem;
         margin: 0 auto;
         padding: 0 1.5rem;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
         flex-wrap: wrap;
-        gap: 1rem;
-      }
-      .site-footer__credit {
-        font-size: 0.7rem;
-        font-weight: 300;
-        color: var(--saa-muted);
-      }
-      .site-footer__credit a {
-        color: var(--saa-muted);
-        text-decoration: underline;
-        text-underline-offset: 2px;
-      }
-      .site-footer__credit a:hover { color: var(--saa-accent); }
-      .site-footer__social { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
-      .site-footer__social a {
-        font-size: 0.62rem;
-        font-weight: 600;
-        letter-spacing: 0.1em;
+        gap: 0.5rem 1.5rem;
+        font-family: var(--saa-font);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
+        color: var(--saa-footer);
+        text-align: center;
+      }
+      .site-footer__credit { margin: 0; }
+      .site-footer__social {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .site-footer__link {
+        color: inherit;
         text-decoration: none;
-        color: var(--saa-muted);
         transition: color var(--saa-transition);
       }
-      .site-footer__social a:hover { color: var(--saa-accent); }
+      .site-footer__link:hover { color: var(--saa-accent); opacity: 1; }
     </style>
-  </head>
 
-  <body>
-    <header class="site-header">
-      <div class="site-header__inner">
-
-        <!-- Logo + wordmark -->
-        <div class="site-header__brand">
-          <a href="/" aria-label="Go to episode list">
-            <img src="/logo.svg" alt="Sudan Art Archive" class="site-header__logo" width="210" height="166" />
-          </a>
-          <div class="site-header__wordmark">
-            <a
-              href="https://sudanartarchive.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="site-header__archive-link"
-            >Sudan Art Archive</a>
-            <a href="/" class="site-header__podcast-label">Podcast</a>
-          </div>
-        </div>
-
-        <!-- Nav -->
-        <nav aria-label="Main navigation" class="site-nav">
-          <a href="https://sudanartarchive.com" target="_blank" rel="noopener noreferrer">sudanartarchive.com</a>
-        </nav>
-
-      </div>
-    </header>
-
-    <main>
-      <slot />
-    </main>
-
-    <footer class="site-footer">
-      <div class="site-footer__inner">
-        <p class="site-footer__credit">
-          &copy; {new Date().getFullYear()} Sudan Art Archive. A project of{" "}
-          <a href="https://musesd.com" target="_blank" rel="noopener noreferrer">The Muse multi studios</a>.
-        </p>
-        <nav aria-label="Social links" class="site-footer__social">
-          <a href="https://www.facebook.com/sudanartarchive" target="_blank" rel="noopener noreferrer" aria-label="Facebook">Facebook</a>
-          <a href="https://www.instagram.com/sudanartarchive/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">Instagram</a>
-          <a href="https://www.linkedin.com/company/sudan-art-archive" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">LinkedIn</a>
-        </nav>
-      </div>
-    </footer>
+    <!-- ── Language toggle ──────────────────────────────────────── -->
+    <script is:inline>
+      (function () {
+        var btn = document.getElementById('lang-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          var html = document.documentElement;
+          var isAr = html.classList.toggle('lang-ar');
+          var lang = isAr ? 'ar' : 'en';
+          html.setAttribute('lang', lang);
+          try { localStorage.setItem('saa_lang', lang); } catch (e) {}
+          window.dispatchEvent(new CustomEvent('saa:langchange', { detail: { lang: lang } }));
+        });
+      })();
+    </script>
   </body>
 </html>
