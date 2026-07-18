@@ -1,6 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "saa-podcast",
+
+  // "The Muse multi studios" — NOT the personal ghassanjaafar account.
+  // The login has access to both, and with two accounts wrangler cannot pick
+  // one on its own: it prompts, or fails outright in CI. Pinning it here means
+  // a deploy can never silently land on the wrong account.
+  // This is an identifier, not a credential — it grants nothing without an API token.
+  "account_id": "f78c5de3f73612941ac655302a2a5f9e",
+
   "compatibility_date": "2026-04-15",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {

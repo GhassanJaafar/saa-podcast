@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/clean-assets.mjs",
     "preview": "astro build && wrangler dev --config dist/server/wrangler.json",
     "deploy": "astro build && wrangler deploy --config dist/server/wrangler.json",
     "cf-typegen": "wrangler types",
