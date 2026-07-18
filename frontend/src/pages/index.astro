@@ -1,14 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import T from '../components/T.astro';
-import { getEpisodes, getSeasons, getSettings, imageUrl, seasonMap } from '../lib/sanity';
+import { getSiteData, imageUrl, seasonMap } from '../lib/sanity';
 import { ui } from '../i18n/ui';
 
-const [episodes, seasons, settings] = await Promise.all([
-  getEpisodes(),
-  getSeasons(),
-  getSettings(),
-]);
+const { episodes, seasons, settings } = await getSiteData();
 
 const seasonsByNumber = seasonMap(seasons);
 

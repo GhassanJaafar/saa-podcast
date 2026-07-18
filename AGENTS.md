@@ -100,6 +100,38 @@ Artwork falls back in a cascade everywhere: **episode → season → podcast def
 
 ---
 
+## Sanity request budget — read before touching `src/lib/sanity.ts`
+
+The plan allows **250,000 API requests a month**, and the site is server-rendered, so
+every visitor could cost requests. Two things keep that in check:
+
+1. **One query per render.** `SITE_QUERY` fetches settings, episodes and seasons together in
+   a single GROQ request. Do not add a second `sanityClient.fetch` to a page — extend
+   `SITE_QUERY` instead. The episode page deliberately finds its episode inside the already
+   fetched list rather than querying by slug; a podcast has tens of episodes, so reusing the
+   list trades a little bandwidth for a whole API request.
+2. **An in-isolate cache** (`CACHE_TTL_MS`, 60s) in `getSiteData()`. Cloudflare keeps isolates
+   warm, so a burst of traffic collapses into one upstream query. Concurrent cold misses are
+   de-duped through `inFlight` so a cold start fires one query, not one per request.
+
+Measured in the Workers runtime: first request ~1.0s, subsequent ~0.003s. Four consecutive
+page views cost **one** Sanity request rather than sixteen.
+
+The layout also needs `settings`, and calls `getSiteData()` itself — that is free, because it
+shares the cached payload with the page. It used to be a second `getSettings()` call, which
+alone doubled the bill.
+
+**The trade is staleness.** A change published in Studio appears within `CACHE_TTL_MS` plus a
+few seconds of Sanity CDN propagation (`useCdn: true`) — roughly a minute. Lower the TTL if
+you want faster edits, and expect the request count to rise proportionally. If the site is
+ever spiking against the quota, cache HTML at the edge with `Cache-Control: s-maxage` before
+reaching for a shorter TTL.
+
+`getSiteData()` must never throw. If Sanity is unreachable it serves the last good payload,
+or bilingual defaults, rather than 500ing the site.
+
+---
+
 ## Bilingual system
 
 Copied wholesale from SAA Forms. A `.lang-ar` class on `<html>` drives everything — no i18n

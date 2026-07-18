@@ -1,19 +1,19 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import T from '../../components/T.astro';
-import { getEpisode, getSeasons, getSettings, imageUrl, seasonMap } from '../../lib/sanity';
+import { getSiteData, imageUrl, seasonMap } from '../../lib/sanity';
 import { ui } from '../../i18n/ui';
 
 // No getStaticPaths — routes are rendered on demand so a new episode published
 // in Sanity is live immediately, without a redeploy.
 const { slug } = Astro.params;
 
-const episode = await getEpisode(slug!);
+const { episodes, seasons, settings } = await getSiteData();
+const episode = episodes.find((ep) => ep.slug === slug);
 if (!episode) {
   return Astro.rewrite('/404');
 }
 
-const [seasons, settings] = await Promise.all([getSeasons(), getSettings()]);
 const season = seasonMap(seasons)[episode.season ?? 1];
 
 const siteUrl = Astro.site!.origin;

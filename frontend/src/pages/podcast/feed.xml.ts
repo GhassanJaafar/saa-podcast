@@ -15,7 +15,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getEpisodes, getSeasons, getSettings, imageUrl, seasonMap } from '../../lib/sanity';
+import { getSiteData, imageUrl, seasonMap } from '../../lib/sanity';
 
 /** Escape XML special characters. */
 function x(str: string | undefined | null): string {
@@ -65,11 +65,7 @@ function audioMimeType(url: string): string {
 }
 
 export const GET: APIRoute = async ({ site }) => {
-  const [settings, episodes, seasons] = await Promise.all([
-    getSettings(),
-    getEpisodes(),
-    getSeasons(),
-  ]);
+  const { settings, episodes, seasons } = await getSiteData();
 
   // `site` is the origin from astro.config.mjs
   const siteUrl = site!.origin;

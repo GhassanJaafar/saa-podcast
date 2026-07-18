@@ -8,7 +8,7 @@
  */
 import '../styles/global.css';
 import T from '../components/T.astro';
-import { getSettings, imageUrl } from '../lib/sanity';
+import { getSiteData, imageUrl } from '../lib/sanity';
 import { ui } from '../i18n/ui';
 
 // Meta tags carry a single language, so there are no bilingual props here —
@@ -22,7 +22,8 @@ interface Props {
   noindex?: boolean;
 }
 
-const settings = await getSettings();
+// Shares the cached payload with the page being rendered — no extra API call.
+const { settings } = await getSiteData();
 
 const {
   title,
