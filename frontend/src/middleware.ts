@@ -9,13 +9,18 @@ import { defineMiddleware } from 'astro:middleware';
  */
 const CSP = [
   "default-src 'self'",
+  // 'unsafe-inline' covers the language pre-paint script, the toggle, the audio
+  // player and the JSON-LD block. Replace with hashes if those ever move out.
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: https://cdn.sanity.io *.r2.dev *.r2.cloudflarestorage.com https:",
-  "media-src 'self' *.r2.dev *.r2.cloudflarestorage.com https:",
-  "connect-src 'self' https://*.api.sanity.io https://*.apicdn.sanity.io",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  // Images come from Sanity's CDN only; episode audio from the R2 bucket.
+  "img-src 'self' data: https://cdn.sanity.io",
+  'media-src https://*.r2.dev https://*.r2.cloudflarestorage.com',
+  // Sanity is queried server-side, so the browser never connects to it.
+  "connect-src 'self'",
+  "font-src 'self' https://fonts.gstatic.com",
   "frame-ancestors 'none'",
+  "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   'upgrade-insecure-requests',

@@ -29,15 +29,7 @@ export const ui = {
   mainNav: { en: 'Main navigation', ar: 'التنقل الرئيسي' },
   socialLinks: { en: 'Social links', ar: 'روابط التواصل' },
   allRightsReserved: { en: 'All rights reserved', ar: 'جميع الحقوق محفوظة' },
-  aProjectOf: { en: 'A project of', ar: 'مشروع من' },
   hoursShort: { en: 'hr', ar: 'س' },
   minutesShort: { en: 'min', ar: 'د' },
   secondsShort: { en: 'sec', ar: 'ث' },
 } as const;
-
-export type UIKey = keyof typeof ui;
-
-/** Pick an Arabic value with an English fallback — used for Sanity fields. */
-export function ar<T>(arabic: T | undefined | null, english: T): T {
-  return arabic ?? english;
-}

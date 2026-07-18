@@ -71,7 +71,7 @@ is live on the next request — no rebuild, no redeploy.
 |---|---|
 | Framework | Astro 6 (`output: 'server'`, SSR) |
 | Adapter / host | `@astrojs/cloudflare` → **Cloudflare Workers** |
-| Styling | Tailwind CSS v4 (`@tailwindcss/vite`) + `src/styles/global.css` tokens |
+| Styling | Plain CSS — tokens in `src/styles/global.css`, component styles scoped in each `.astro` file |
 | CMS / database | **Sanity** (project `joj4u8dz`, dataset `production`) |
 | Audio hosting | **Cloudflare R2** (public bucket, URL pasted into the episode) |
 | Source | GitHub `GhassanJaafar/saa-podcast` |
@@ -160,6 +160,16 @@ Source of truth is **SAA Forms `STYLE_GUIDE.md`**. The short version:
 - Hover and focus both go red. One transition speed: `0.18s ease`.
 
 Containers are `56rem`, matching Forms.
+
+**There is no CSS framework.** Tailwind was installed but never used — not one utility class in
+the markup — so it was removed; it was shipping its preflight and property polyfills for
+nothing. `global.css` holds tokens, the reset and truly global rules; everything else is a
+scoped `<style>` block next to its markup. Note the `button, input, select, textarea { font:
+inherit }` rule in the reset: form controls do not inherit typography on their own, and that
+was previously coming from Tailwind's preflight.
+
+Do not add utility classes or reintroduce a framework without a concrete reason — and if you
+port a component from Forms, bring only the CSS it needs.
 
 ---
 

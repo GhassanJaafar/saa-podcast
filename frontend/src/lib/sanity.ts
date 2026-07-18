@@ -16,7 +16,7 @@ import { createImageUrlBuilder, type SanityImageSource } from '@sanity/image-url
 const SANITY_PROJECT_ID = 'joj4u8dz';
 const SANITY_DATASET = 'production';
 
-export const sanityClient = createClient({
+const sanityClient = createClient({
   projectId: SANITY_PROJECT_ID,
   dataset: SANITY_DATASET,
   // Read through Sanity's edge CDN: faster, and CDN reads are metered far more
@@ -243,18 +243,6 @@ function mergeSettings(settings: PodcastSettings | null): PodcastSettings {
     (merged as Record<string, unknown>)[key] = value;
   }
   return merged;
-}
-
-/**
- * Look up one episode.
- *
- * Resolved from the cached payload rather than queried separately — a podcast
- * has tens of episodes, not thousands, so reusing the list costs a little
- * bandwidth and saves an API request on every episode page view.
- */
-export async function getEpisode(slug: string): Promise<Episode | null> {
-  const { episodes } = await getSiteData();
-  return episodes.find((ep) => ep.slug === slug) ?? null;
 }
 
 /** Season number → season document, for cover-art and title lookups. */

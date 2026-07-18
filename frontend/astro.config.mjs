@@ -2,7 +2,6 @@
 import { defineConfig, sessionDrivers } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 import sitemap from '@astrojs/sitemap';
-import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
@@ -23,7 +22,6 @@ export default defineConfig({
   integrations: [sitemap()],
 
   vite: {
-    plugins: [tailwindcss()],
     ssr: { external: ['sharp'] },
   },
 });
