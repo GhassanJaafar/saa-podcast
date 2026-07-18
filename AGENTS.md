@@ -164,18 +164,31 @@ Sessions are pinned to an in-memory driver in `astro.config.mjs`. That is not a 
 without it the adapter auto-injects a `SESSION` KV binding that would need a real KV namespace
 provisioned before `wrangler deploy` succeeds. The site is read-only and uses no sessions.
 
-### Environment variables
+### Environment variables — there are none
 
-Set these in the Cloudflare dashboard (they are inlined at build time, so they must be present
-during the build, not just at runtime):
+The frontend reads **no environment variables at all**. There is no `.env` file, and nothing
+needs to be configured in the Cloudflare dashboard for the site to build or run. Do not
+reintroduce env vars for configuration that isn't secret.
 
-| Variable | Purpose |
+The values that used to live there:
+
+| Was | Now |
 |---|---|
-| `PUBLIC_SANITY_PROJECT_ID` | Sanity project (`joj4u8dz`) |
-| `PUBLIC_SANITY_DATASET` | `production` |
-| `PUBLIC_SITE_URL` | `https://podcast.sudanartarchive.com` — used for canonicals and feed URLs |
+| `PUBLIC_SANITY_PROJECT_ID`, `PUBLIC_SANITY_DATASET` | Constants at the top of `src/lib/sanity.ts` |
+| `PUBLIC_SITE_URL` | `site` in `astro.config.mjs`, read via `Astro.site` |
+| `PUBLIC_COVER_IMAGE_URL` | The `coverImage` field on `podcastSettings` in Sanity |
 
-`PUBLIC_COVER_IMAGE_URL` is **no longer used** — cover art comes from `podcastSettings`.
+None of them were secrets. The Sanity project ID and dataset are published in every image URL
+the site emits (`cdn.sanity.io/images/joj4u8dz/production/…`), the site URL is the public
+domain, and the Sanity client is anonymous and read-only — **this project holds no
+credentials.** If that ever changes (a Sanity write token, an API key), that value is a real
+secret: it belongs in Wrangler secrets and must be read at runtime via
+`Astro.locals.runtime.env`, never behind a `PUBLIC_` prefix, which Vite inlines into the
+client bundle.
+
+Removing them also removes a failure mode. Because `PUBLIC_*` vars are inlined at **build**
+time, setting them as Cloudflare *runtime* secrets does nothing — a git-connected build would
+bake in `undefined` and deploy a site with no Sanity connection and no episodes.
 
 ### Security headers
 

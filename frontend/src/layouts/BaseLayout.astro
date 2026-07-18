@@ -33,7 +33,8 @@ const {
   noindex = false,
 } = Astro.props;
 
-const siteUrl = import.meta.env.PUBLIC_SITE_URL || Astro.site?.origin || 'https://podcast.sudanartarchive.com';
+// Canonical origin comes from `site` in astro.config.mjs — the one place it is defined.
+const siteUrl = Astro.site!.origin;
 const shortTitle = settings.shortTitle || settings.siteTitle;
 const fullTitle = title === shortTitle ? title : `${title} | ${shortTitle}`;
 

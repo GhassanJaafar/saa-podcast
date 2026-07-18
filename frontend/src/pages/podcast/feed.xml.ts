@@ -71,8 +71,8 @@ export const GET: APIRoute = async ({ site }) => {
     getSeasons(),
   ]);
 
-  const siteUrl =
-    import.meta.env.PUBLIC_SITE_URL || site?.origin || 'https://podcast.sudanartarchive.com';
+  // `site` is the origin from astro.config.mjs
+  const siteUrl = site!.origin;
   const feedUrl = `${siteUrl}/podcast/feed.xml`;
 
   const seasonsByNumber = seasonMap(seasons);

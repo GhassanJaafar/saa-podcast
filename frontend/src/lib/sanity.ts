@@ -1,13 +1,29 @@
 import { createClient } from '@sanity/client';
 import { createImageUrlBuilder, type SanityImageSource } from '@sanity/image-url';
 
+/**
+ * Sanity connection details.
+ *
+ * These are deliberately hard-coded rather than read from the environment.
+ * They are not credentials: the project ID and dataset are already published
+ * in every image URL the site emits (`cdn.sanity.io/images/joj4u8dz/production/…`),
+ * and the client below is anonymous and read-only. Keeping them in code means
+ * there is no build-time environment to configure and no way to deploy a build
+ * that silently points at nothing.
+ *
+ * To point the site at a different Sanity project, change them here.
+ */
+const SANITY_PROJECT_ID = 'joj4u8dz';
+const SANITY_DATASET = 'production';
+
 export const sanityClient = createClient({
-  projectId: import.meta.env.PUBLIC_SANITY_PROJECT_ID,
-  dataset: import.meta.env.PUBLIC_SANITY_DATASET || 'production',
+  projectId: SANITY_PROJECT_ID,
+  dataset: SANITY_DATASET,
   // useCdn: false → always fetch fresh data in SSR mode, so an edit in Studio
   // shows up on the next request without a redeploy.
   useCdn: false,
   apiVersion: '2024-01-01',
+  // Anonymous client — reads published documents only, so no token is needed.
   perspective: 'published',
 });
 

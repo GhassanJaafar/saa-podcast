@@ -16,8 +16,7 @@ if (!episode) {
 const [seasons, settings] = await Promise.all([getSeasons(), getSettings()]);
 const season = seasonMap(seasons)[episode.season ?? 1];
 
-const siteUrl =
-  import.meta.env.PUBLIC_SITE_URL || Astro.site?.origin || 'https://podcast.sudanartarchive.com';
+const siteUrl = Astro.site!.origin;
 
 function formatDate(dateStr: string | undefined, locale: string) {
   if (!dateStr) return '';
