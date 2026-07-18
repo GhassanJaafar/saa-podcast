@@ -1,28 +1,14 @@
-# build output
-dist/
-# generated types
-.astro/
-worker-configuration.d.ts
+# Root-level ignores. Each package (frontend/, studio/) keeps its own
+# .gitignore for build output and dependencies.
 
-# dependencies
-node_modules/
-
-# logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-
-# environment variables
-.env
-.env.production
-
-# macOS-specific files
+# macOS
 .DS_Store
 
-# jetbrains setting folder
+# Editors
 .idea/
+*.swp
 
-# cloudflare
-.wrangler/
+# Local env
+.env
+.env.production
+.env.local

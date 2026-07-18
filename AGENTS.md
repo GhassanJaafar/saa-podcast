@@ -19,6 +19,26 @@ Apple Podcasts and other directories subscribe to.
 
 ---
 
+## Repository layout
+
+A monorepo, laid out to match SAA Forms so the two projects navigate identically:
+
+```
+saa-podcast/
+├── AGENTS.md          ← you are here
+├── frontend/          Astro site → Cloudflare Workers
+└── studio/            Sanity Studio (schema + admin UI)
+```
+
+The two packages have **separate** `package.json` files and `node_modules`; there is no
+workspace root and no shared dependency tree. Run npm commands from inside the package you
+mean, or use `npm --prefix frontend run <script>`.
+
+They are deployed independently: `frontend/` with `npm run deploy` (Wrangler), `studio/` with
+`npm run deploy` (Sanity CLI). Neither deploy triggers the other.
+
+---
+
 ## Architecture
 
 ```
@@ -64,7 +84,7 @@ is live on the next request — no rebuild, no redeploy.
 
 ## Sanity schema
 
-Studio lives in the sibling `sanity/` folder (see *Known issues* below).
+Studio lives in `studio/`. Deploy it with `npm run deploy` from that folder.
 
 | Type | Purpose |
 |---|---|
@@ -184,10 +204,6 @@ After changing this route, validate at https://podba.se/validate.
 
 ## Known issues / things to pick up
 
-- **`sanity/` is not under version control.** Only `astro/` is a git repository. The Studio
-  schema currently lives outside any repo, so schema changes are not tracked or backed up.
-  SAA Forms solves this by being a monorepo (`frontend/` + `studio/`); this project should
-  probably do the same.
 - **The `podcastSettings` document does not exist in Sanity yet.** `getSettings()` merges
   against a full set of English + Arabic defaults, so the site renders correctly without it —
   but the cover art, which has no default, falls back to the newest episode's image. Create
