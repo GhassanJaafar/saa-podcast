@@ -15,7 +15,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   // Images come from Sanity's CDN only; episode audio from the R2 bucket.
   "img-src 'self' data: https://cdn.sanity.io",
-  'media-src https://*.r2.dev https://*.r2.cloudflarestorage.com',
+  'media-src https://*.r2.dev https://*.r2.cloudflarestorage.com https://*.sudanartarchive.com',
   // Sanity is queried server-side, so the browser never connects to it.
   "connect-src 'self'",
   "font-src 'self' https://fonts.gstatic.com",
