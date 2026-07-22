@@ -70,8 +70,23 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
   ) : (
     seasonNumbers.map((num) => {
       const season = seasonsByNumber[num];
+      // One large cover for the whole season, shown above the episode list:
+      // season art → the newest episode's art in this season → podcast cover.
+      const seasonCover =
+        imageUrl(season?.coverImage, 800, 800) ||
+        imageUrl(bySeason.get(num)!.find((e) => e.coverImage)?.coverImage, 800, 800) ||
+        imageUrl(settings.coverImage, 800, 800);
       return (
         <section class="season-section">
+          {seasonCover && (
+            <img
+              src={seasonCover}
+              alt={season?.title || `${ui.season.en} ${num}`}
+              class="season-cover"
+              width="400"
+              height="400"
+            />
+          )}
           {seasonNumbers.length > 1 && (
             <p class="season-heading">
               <T
@@ -81,61 +96,44 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
             </p>
           )}
           <ul class="episode-list">
-            {bySeason.get(num)!.map((ep) => {
-              const thumb =
-                imageUrl(ep.coverImage, 144, 144) ||
-                imageUrl(season?.coverImage, 144, 144) ||
-                imageUrl(settings.coverImage, 144, 144);
-              return (
-                <li class="episode-card">
-                  <span class="episode-num">{ep.episodeNumber ?? '—'}</span>
+            {bySeason.get(num)!.map((ep) => (
+              <li class="episode-card">
+                <span class="episode-num">{ep.episodeNumber ?? '—'}</span>
 
-                  <div class="episode-body">
-                    <h2 class="episode-title">
-                      <a href={`/episodes/${ep.slug}`}>
-                        <T en={ep.title} ar={ep.titleAr} />
-                      </a>
-                    </h2>
+                <div class="episode-body">
+                  <h2 class="episode-title">
+                    <a href={`/episodes/${ep.slug}`}>
+                      <T en={ep.title} ar={ep.titleAr} />
+                    </a>
+                  </h2>
 
-                    <p class="episode-meta">
-                      {ep.publishedAt && (
-                        <span>
-                          <T
-                            en={formatDate(ep.publishedAt, 'en-GB')}
-                            ar={formatDate(ep.publishedAt, 'ar-EG')}
-                          />
-                        </span>
-                      )}
-                      {ep.duration && (
-                        <span>
-                          <T
-                            en={formatDuration(ep.duration, 'en')}
-                            ar={formatDuration(ep.duration, 'ar')}
-                          />
-                        </span>
-                      )}
-                    </p>
-
-                    {ep.description && (
-                      <p class="episode-desc">
-                        <T en={ep.description} ar={ep.descriptionAr} block />
-                      </p>
+                  <p class="episode-meta">
+                    {ep.publishedAt && (
+                      <span>
+                        <T
+                          en={formatDate(ep.publishedAt, 'en-GB')}
+                          ar={formatDate(ep.publishedAt, 'ar-EG')}
+                        />
+                      </span>
                     )}
-                  </div>
+                    {ep.duration && (
+                      <span>
+                        <T
+                          en={formatDuration(ep.duration, 'en')}
+                          ar={formatDuration(ep.duration, 'ar')}
+                        />
+                      </span>
+                    )}
+                  </p>
 
-                  {thumb && (
-                    <img
-                      src={thumb}
-                      alt={`Cover for ${ep.title}`}
-                      class="episode-cover-thumb"
-                      width="72"
-                      height="72"
-                      loading="lazy"
-                    />
+                  {ep.description && (
+                    <p class="episode-desc">
+                      <T en={ep.description} ar={ep.descriptionAr} block />
+                    </p>
                   )}
-                </li>
-              );
-            })}
+                </div>
+              </li>
+            ))}
           </ul>
         </section>
       );
@@ -153,6 +151,17 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
     }
 
     .season-section { margin-bottom: 3rem; }
+
+    /* One large square cover per season, standing on its own above the list */
+    .season-cover {
+      width: 100%;
+      max-width: 22rem;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border: 0.0625rem solid var(--saa-sand);
+      margin-bottom: 1.75rem;
+    }
+
     .season-heading {
       font-size: 0.75rem;
       font-weight: 600;
@@ -180,7 +189,7 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
       border-radius: var(--saa-radius-card);
       padding: 1.25rem 1.5rem;
       display: grid;
-      grid-template-columns: 2.5rem 1fr auto;
+      grid-template-columns: 2.5rem 1fr;
       gap: 0 1rem;
       align-items: start;
       transition: border-color var(--saa-transition);
@@ -193,14 +202,6 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
       color: var(--saa-muted);
       padding-top: 0.2rem;
       text-align: right;
-    }
-
-    .episode-cover-thumb {
-      width: 4.5rem;
-      height: 4.5rem;
-      object-fit: cover;
-      border: 0.0625rem solid var(--saa-sand);
-      flex-shrink: 0;
     }
 
     .episode-title {
@@ -249,7 +250,6 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
         grid-template-columns: 2rem 1fr;
         padding: 1rem;
       }
-      .episode-cover-thumb { display: none; }
     }
   </style>
 </BaseLayout>

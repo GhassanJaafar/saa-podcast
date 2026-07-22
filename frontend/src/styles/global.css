@@ -57,7 +57,10 @@ html.lang-ar main      { direction: rtl; }
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
-  font-size: 16px;
+  /* 100% honours the visitor's browser font-size setting and keeps 1rem = 16px
+     by default. Everything else in the app is sized in rem, so the whole layout
+     scales from this one value. */
+  font-size: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
