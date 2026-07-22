@@ -8,7 +8,7 @@ const SINGLETONS = ['podcastSettings']
 
 export default defineConfig({
   name: 'default',
-  title: 'Sudan Art Archive — Podcast',
+  title: 'SAA Podcast',
 
   projectId: 'joj4u8dz',
   dataset: 'production',

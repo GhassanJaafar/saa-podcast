@@ -8,6 +8,16 @@ const { episodes, seasons, settings } = await getSiteData();
 
 const seasonsByNumber = seasonMap(seasons);
 
+// Social-share image (Open Graph / Twitter). The podcast-level cover in Studio
+// is the intended source; fall back to the newest episode's cover, then any
+// season cover, so a shared homepage link always previews real cover art
+// rather than a missing placeholder file.
+const shareImage =
+  imageUrl(settings.coverImage, 1400, 1400) ||
+  imageUrl(episodes[0]?.coverImage, 1400, 1400) ||
+  imageUrl(seasons[0]?.coverImage, 1400, 1400) ||
+  undefined;
+
 function formatDate(dateStr: string | undefined, locale: string) {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString(locale, {
@@ -49,6 +59,7 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
 <BaseLayout
   title={settings.shortTitle || settings.siteTitle}
   description={settings.description}
+  ogImage={shareImage}
 >
   <div class="page-intro">
     <h1><T en={ui.episodes.en} ar={ui.episodes.ar} /></h1>

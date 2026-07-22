@@ -295,16 +295,16 @@ const year = new Date().getFullYear();
       .site-header__lang-btn {
         background: none;
         border: 0.0625rem solid var(--saa-sand);
-        border-radius: 0;
-        padding: 0.3rem 0.75rem;
+        border-radius: var(--saa-radius-btn);
+        padding: 0.3rem 0.85rem;
         font-size: 0.75rem;
         color: var(--saa-text);
         cursor: pointer;
         letter-spacing: 0.03em;
-        transition: border-color var(--saa-transition);
+        transition: border-color var(--saa-transition), color var(--saa-transition);
         white-space: nowrap;
       }
-      .site-header__lang-btn:hover { border-color: var(--saa-text); }
+      .site-header__lang-btn:hover { border-color: var(--saa-accent); color: var(--saa-accent); }
 
       @media (max-width: 30rem) {
         .site-header__inner { padding: 0.875rem 1rem; }
