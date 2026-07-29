@@ -40,9 +40,11 @@ export default defineType({
     defineField({
       name: 'description',
       title: 'Description (EN)',
+      description:
+        'Shown on the site and used for the RSS <description> and itunes:summary. Apple flags anything under 50 characters, so write a full sentence or two.',
       type: 'text',
       rows: 3,
-      validation: (Rule) => Rule.required(),
+      validation: (Rule) => Rule.required().min(50),
     }),
     defineField({
       name: 'descriptionAr',

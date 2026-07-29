@@ -64,12 +64,47 @@ function audioMimeType(url: string): string {
   return (ext && AUDIO_MIME_TYPES[ext]) || 'audio/mpeg';
 }
 
+/**
+ * Stable `<podcast:guid>` for the show.
+ *
+ * The Podcast Namespace spec defines it as a UUIDv5 built from the feed URL
+ * (scheme and any trailing slash stripped) under a fixed namespace. Computing
+ * it deterministically means the show keeps the same identity across the
+ * Podcast Index forever, with nothing to store — as long as the feed URL is
+ * unchanged. crypto.subtle is available in the Workers runtime.
+ */
+const PODCAST_NAMESPACE = 'ead4c236-bf58-58c6-a2c6-a6b28d128cb6';
+
+function uuidToBytes(uuid: string): Uint8Array {
+  const hex = uuid.replace(/-/g, '');
+  const bytes = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return bytes;
+}
+
+async function podcastGuid(feedUrl: string): Promise<string> {
+  const name = feedUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const ns = uuidToBytes(PODCAST_NAMESPACE);
+  const nameBytes = new TextEncoder().encode(name);
+  const input = new Uint8Array(ns.length + nameBytes.length);
+  input.set(ns, 0);
+  input.set(nameBytes, ns.length);
+
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-1', input)).slice(0, 16);
+  digest[6] = (digest[6] & 0x0f) | 0x50; // version 5
+  digest[8] = (digest[8] & 0x3f) | 0x80; // RFC 4122 variant
+
+  const hex = [...digest].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export const GET: APIRoute = async ({ site }) => {
   const { settings, episodes, seasons } = await getSiteData();
 
   // `site` is the origin from astro.config.mjs
   const siteUrl = site!.origin;
   const feedUrl = `${siteUrl}/podcast/feed.xml`;
+  const guid = await podcastGuid(feedUrl);
 
   const seasonsByNumber = seasonMap(seasons);
 
@@ -137,6 +172,8 @@ export const GET: APIRoute = async ({ site }) => {
     <copyright>&#169; ${new Date().getFullYear()} ${x(settings.copyright || settings.author)}</copyright>
 
     <atom:link href="${x(feedUrl)}" rel="self" type="application/rss+xml" />
+    <podcast:guid>${guid}</podcast:guid>
+    <podcast:locked${settings.ownerEmail ? ` owner="${x(settings.ownerEmail)}"` : ''}>no</podcast:locked>
 ${defaultCover ? `
     <image>
       <url>${x(defaultCover)}</url>
