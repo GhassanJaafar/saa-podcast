@@ -76,25 +76,42 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
         imageUrl(season?.coverImage, 800, 800) ||
         imageUrl(bySeason.get(num)!.find((e) => e.coverImage)?.coverImage, 800, 800) ||
         imageUrl(settings.coverImage, 800, 800);
+      const multiSeason = seasonNumbers.length > 1;
+      // Beside the cover: the season title (when there is more than one season)
+      // or the podcast title otherwise, plus a blurb — the season's own
+      // description if it has one, else the podcast description.
+      const introTitleEn = multiSeason ? (season?.title || `${ui.season.en} ${num}`) : settings.siteTitle;
+      const introTitleAr = multiSeason ? (season?.titleAr || `${ui.season.ar} ${num}`) : settings.siteTitleAr;
+      const introBodyEn = season?.description || settings.description;
+      const introBodyAr = season?.descriptionAr || settings.descriptionAr;
       return (
         <section class="season-section">
-          {seasonCover && (
-            <img
-              src={seasonCover}
-              alt={season?.title || `${ui.season.en} ${num}`}
-              class="season-cover"
-              width="400"
-              height="400"
-            />
-          )}
-          {seasonNumbers.length > 1 && (
-            <p class="season-heading">
-              <T
-                en={season?.title || `${ui.season.en} ${num}`}
-                ar={season?.titleAr || `${ui.season.ar} ${num}`}
+          <div class="season-intro">
+            {seasonCover && (
+              <img
+                src={seasonCover}
+                alt={introTitleEn}
+                class="season-cover"
+                width="400"
+                height="400"
               />
-            </p>
-          )}
+            )}
+            <div class="season-intro__text">
+              {multiSeason && (
+                <p class="season-eyebrow">
+                  <T en={`${ui.season.en} ${num}`} ar={`${ui.season.ar} ${num}`} />
+                </p>
+              )}
+              <h2 class="season-title">
+                <T en={introTitleEn} ar={introTitleAr} />
+              </h2>
+              {introBodyEn && (
+                <div class="season-about">
+                  <T en={introBodyEn} ar={introBodyAr} block />
+                </div>
+              )}
+            </div>
+          </div>
           <ul class="episode-list">
             {bySeason.get(num)!.map((ep) => (
               <li class="episode-card">
@@ -152,26 +169,49 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
 
     .season-section { margin-bottom: 3rem; }
 
-    /* One large square cover per season, standing on its own above the list */
+    /* Cover on one side, title + blurb on the other, above the episode list. */
+    .season-intro {
+      display: flex;
+      gap: 1.75rem;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 0.0625rem solid var(--saa-sand);
+    }
     .season-cover {
-      width: 100%;
-      max-width: 22rem;
+      width: 14rem;
+      flex-shrink: 0;
       aspect-ratio: 1 / 1;
       object-fit: cover;
       border: 0.0625rem solid var(--saa-sand);
-      margin-bottom: 1.75rem;
     }
-
-    .season-heading {
+    .season-intro__text {
+      flex: 1;
+      min-width: 0;
+    }
+    .season-eyebrow {
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--saa-muted);
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 0.0625rem solid var(--saa-sand);
+      margin: 0 0 0.5rem;
     }
+    .season-title {
+      font-size: clamp(1.25rem, 3vw, 1.75rem);
+      font-weight: 300;
+      line-height: 1.25;
+      margin: 0 0 0.9rem;
+    }
+    .season-about {
+      font-size: 0.95rem;
+      font-weight: 300;
+      line-height: 1.7;
+      color: var(--saa-text);
+      opacity: 0.85;
+    }
+    .season-about :global(p) { margin: 0 0 0.75rem; }
+    .season-about :global(p:last-child) { margin-bottom: 0; }
 
     .episode-list {
       list-style: none;
@@ -243,6 +283,19 @@ const seasonNumbers = [...bySeason.keys()].sort((a, b) => b - a);
       color: var(--saa-muted);
       font-weight: 300;
       padding: 2rem 0;
+    }
+
+    /* Stack the cover and text, and let the cover fill the width, before it
+       gets too cramped to sit side by side. */
+    @media (max-width: 40rem) {
+      .season-intro {
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+      .season-cover {
+        width: 100%;
+        max-width: none;
+      }
     }
 
     @media (max-width: 30rem) {

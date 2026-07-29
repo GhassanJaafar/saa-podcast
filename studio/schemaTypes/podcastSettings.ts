@@ -106,15 +106,31 @@ export default defineType({
     defineField({
       name: 'socialLinks',
       title: 'Social Links',
+      description: 'Shown as icons in the footer. Pick the platform, then paste the page URL.',
       type: 'array',
       of: [
         {
           type: 'object',
           fields: [
             defineField({
-              name: 'label',
-              title: 'Label',
+              name: 'platform',
+              title: 'Platform',
               type: 'string',
+              options: {
+                list: [
+                  {title: 'Facebook', value: 'facebook'},
+                  {title: 'Instagram', value: 'instagram'},
+                  {title: 'X (Twitter)', value: 'x'},
+                  {title: 'YouTube', value: 'youtube'},
+                  {title: 'LinkedIn', value: 'linkedin'},
+                  {title: 'TikTok', value: 'tiktok'},
+                  {title: 'Spotify', value: 'spotify'},
+                  {title: 'Apple Podcasts', value: 'applePodcasts'},
+                  {title: 'SoundCloud', value: 'soundcloud'},
+                  {title: 'WhatsApp', value: 'whatsapp'},
+                  {title: 'RSS Feed', value: 'rss'},
+                ],
+              },
               validation: (Rule) => Rule.required(),
             }),
             defineField({
@@ -124,7 +140,7 @@ export default defineType({
               validation: (Rule) => Rule.required(),
             }),
           ],
-          preview: {select: {title: 'label', subtitle: 'url'}},
+          preview: {select: {title: 'platform', subtitle: 'url'}},
         },
       ],
     }),

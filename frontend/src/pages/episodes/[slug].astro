@@ -323,6 +323,12 @@ const seasonNum = episode.season ?? 1;
     }
     .episode-description p { margin: 0 0 1rem; }
 
+    /* Fill the card width on phones and small tablets rather than leaving a
+       gap to the right of a fixed-width cover. */
+    @media (max-width: 40rem) {
+      .episode-cover { max-width: 100%; width: auto; }
+    }
+
     @media (max-width: 30rem) {
       .episode-header { padding: 1.25rem; }
       .custom-player { padding: 1rem; }

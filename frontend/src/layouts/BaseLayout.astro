@@ -9,6 +9,7 @@
 import '../styles/global.css';
 import T from '../components/T.astro';
 import { getSiteData, imageUrl } from '../lib/sanity';
+import { resolveSocial } from '../lib/social';
 import { ui } from '../i18n/ui';
 
 // Meta tags carry a single language, so there are no bilingual props here —
@@ -23,7 +24,7 @@ interface Props {
 }
 
 // Shares the cached payload with the page being rendered — no extra API call.
-const { settings } = await getSiteData();
+const { settings, episodes, seasons } = await getSiteData();
 
 const {
   title,
@@ -40,7 +41,14 @@ const shortTitle = settings.shortTitle || settings.siteTitle;
 const fullTitle = title === shortTitle ? title : `${title} | ${shortTitle}`;
 
 const canonical = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
-const cover = ogImage || imageUrl(settings.coverImage, 1400, 1400) || `${siteUrl}/cover-season-1.jpg`;
+// Social-share image: whatever the page passed → podcast cover → newest episode
+// or season cover. Never fall back to a hard-coded path, which would 404.
+const cover =
+  ogImage ||
+  imageUrl(settings.coverImage, 1400, 1400) ||
+  imageUrl(episodes[0]?.coverImage, 1400, 1400) ||
+  imageUrl(seasons[0]?.coverImage, 1400, 1400) ||
+  undefined;
 const feedUrl = `${siteUrl}/podcast/feed.xml`;
 const year = new Date().getFullYear();
 ---
@@ -65,19 +73,27 @@ const year = new Date().getFullYear();
     <meta property="og:title"       content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url"         content={canonical} />
-    <meta property="og:image"       content={cover} />
-    <meta property="og:image:width"  content="1400" />
-    <meta property="og:image:height" content="1400" />
-    <meta property="og:image:alt"   content={`${settings.siteTitle} cover art`} />
+    {cover && (
+      <>
+        <meta property="og:image"        content={cover} />
+        <meta property="og:image:width"  content="1400" />
+        <meta property="og:image:height" content="1400" />
+        <meta property="og:image:alt"    content={`${settings.siteTitle} cover art`} />
+      </>
+    )}
     <meta property="og:locale"      content="en_US" />
     <meta property="og:locale:alternate" content="ar_SD" />
 
     <!-- ── Twitter / X ──────────────────────────────────────────── -->
-    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:card"        content={cover ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title"       content={fullTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image"       content={cover} />
-    <meta name="twitter:image:alt"   content={`${settings.siteTitle} cover art`} />
+    {cover && (
+      <>
+        <meta name="twitter:image"     content={cover} />
+        <meta name="twitter:image:alt" content={`${settings.siteTitle} cover art`} />
+      </>
+    )}
 
     <!-- ── RSS autodiscovery ────────────────────────────────────── -->
     <link rel="alternate" type="application/rss+xml" title={settings.siteTitle} href={feedUrl} />
@@ -204,11 +220,27 @@ const year = new Date().getFullYear();
 
         {settings.socialLinks && settings.socialLinks.length > 0 && (
           <nav aria-label={ui.socialLinks.en} class="site-footer__social">
-            {settings.socialLinks.map((link) => (
-              <a href={link.url} target="_blank" rel="noopener noreferrer" class="site-footer__link">
-                {link.label}
-              </a>
-            ))}
+            {settings.socialLinks.map((link) => {
+              const social = resolveSocial(link);
+              return (
+                <a
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="site-footer__social-link"
+                  aria-label={social.label}
+                  title={social.label}
+                >
+                  {social.path ? (
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d={social.path} />
+                    </svg>
+                  ) : (
+                    <span>{social.label}</span>
+                  )}
+                </a>
+              );
+            })}
           </nav>
         )}
       </div>
@@ -349,7 +381,7 @@ const year = new Date().getFullYear();
       .site-footer__social {
         display: flex;
         align-items: center;
-        gap: 1.5rem;
+        gap: 1.1rem;
         flex-wrap: wrap;
         justify-content: center;
       }
@@ -359,6 +391,23 @@ const year = new Date().getFullYear();
         transition: color var(--saa-transition);
       }
       .site-footer__link:hover { color: var(--saa-accent); opacity: 1; }
+
+      /* Social icons: monochrome, inherit the footer grey, go red on hover. */
+      .site-footer__social-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: color var(--saa-transition);
+      }
+      .site-footer__social-link:hover { color: var(--saa-accent); opacity: 1; }
+      .site-footer__social-link svg {
+        width: 1.15rem;
+        height: 1.15rem;
+        fill: currentColor;
+      }
+      /* Unknown platform with no icon falls back to its text label. */
+      .site-footer__social-link span { text-transform: none; letter-spacing: 0; }
     </style>
 
     <!-- ── Language toggle ──────────────────────────────────────── -->

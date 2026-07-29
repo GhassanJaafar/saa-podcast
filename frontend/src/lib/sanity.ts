@@ -46,8 +46,11 @@ export function imageUrl(
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export interface SocialLink {
-  label: string;
+  /** Platform key chosen in Studio, e.g. 'instagram'. Drives the footer icon. */
+  platform?: string;
   url: string;
+  /** Legacy free-text label from before the platform picker. Kept as a fallback. */
+  label?: string;
 }
 
 export interface PodcastSettings {
@@ -217,9 +220,9 @@ function mergeSettings(settings: PodcastSettings | null): PodcastSettings {
     parentOrgName: 'The Muse Multi Studios',
     parentOrgUrl: 'https://musesd.com',
     socialLinks: [
-      { label: 'Facebook', url: 'https://www.facebook.com/sudanartarchive' },
-      { label: 'Instagram', url: 'https://www.instagram.com/sudanartarchive/' },
-      { label: 'LinkedIn', url: 'https://www.linkedin.com/company/sudan-art-archive' },
+      { platform: 'facebook', url: 'https://www.facebook.com/sudanartarchive' },
+      { platform: 'instagram', url: 'https://www.instagram.com/sudanartarchive/' },
+      { platform: 'linkedin', url: 'https://www.linkedin.com/company/sudan-art-archive' },
     ],
     author: 'Sudan Art Archive',
     ownerName: 'Sudan Art Archive',
